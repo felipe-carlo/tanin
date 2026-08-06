@@ -108,7 +108,7 @@ export function MenuMovel({ itens }: { itens: ItemMenu[] }) {
                 aria-current={ativo ? 'page' : undefined}
               >
                 <span className={ativo ? 'text-borra' : undefined}>{item.rotulo}</span>
-                <span className="rotulo text-fio-forte">
+                <span className="rotulo text-tenue">
                   {String(indice + 1).padStart(2, '0')}
                 </span>
               </Link>

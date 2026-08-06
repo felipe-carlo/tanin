@@ -95,7 +95,7 @@ export default async function PaginaDaEdicao({ params }: Props) {
               <span>
                 Edição {edicao.numero} · {faixa.nome}
               </span>
-              <span aria-hidden="true" className="text-fio-forte">
+              <span aria-hidden="true" className="text-tenue">
                 ·
               </span>
               <time dateTime={iso(edicao.dataEnvio)}>{dataPorExtenso(edicao.dataEnvio)}</time>
@@ -149,7 +149,7 @@ export default async function PaginaDaEdicao({ params }: Props) {
                 <ol className="mt-4 space-y-3.5">
                   {blocos.map((bloco, indice) => (
                     <li key={bloco.id ?? indice} className="flex gap-3">
-                      <span aria-hidden="true" className="rotulo pt-0.5 text-fio-forte">
+                      <span aria-hidden="true" className="rotulo pt-0.5 text-tenue">
                         {doisDigitos(indice + 1)}
                       </span>
                       <a href={`#${bloco.ancora}`} className="link-titulo text-apoio leading-snug">
@@ -183,7 +183,7 @@ export default async function PaginaDaEdicao({ params }: Props) {
             </Link>
           ) : (
             <span className="bg-papel p-6 sm:p-8">
-              <span className="rotulo text-fio-forte">Primeira edição</span>
+              <span className="rotulo text-tenue">Primeira edição</span>
             </span>
           )}
 
@@ -198,7 +198,7 @@ export default async function PaginaDaEdicao({ params }: Props) {
             </Link>
           ) : (
             <span className="bg-papel p-6 text-right sm:p-8">
-              <span className="rotulo text-fio-forte">Edição mais recente</span>
+              <span className="rotulo text-tenue">Edição mais recente</span>
             </span>
           )}
         </nav>

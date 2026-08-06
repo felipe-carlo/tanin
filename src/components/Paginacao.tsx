@@ -58,7 +58,7 @@ export function Paginacao({
           return (
             <li key={pagina} className="flex items-center">
               {salto && (
-                <span aria-hidden="true" className="rotulo px-2 text-fio-forte">
+                <span aria-hidden="true" className="rotulo px-2 text-tenue">
                   …
                 </span>
               )}

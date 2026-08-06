@@ -266,7 +266,7 @@ export default async function PaginaSobre() {
                           )}
                         </p>
                         {credencial.ano && (
-                          <p className="rotulo mt-1 text-fio-forte">{credencial.ano}</p>
+                          <p className="rotulo mt-1 text-tenue">{credencial.ano}</p>
                         )}
                       </li>
                     ))}

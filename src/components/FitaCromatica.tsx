@@ -98,7 +98,7 @@ export function LinhaEdicao({ edicao }: { edicao: Edicao }) {
   return (
     <article className="group relative flex items-baseline gap-4 border-t border-fio py-6 md:gap-8">
       <span
-        className="cartaz !text-[2.5rem] !leading-none text-fio-forte transition-colors duration-300 group-hover:text-borra md:!text-[3.5rem]"
+        className="cartaz !text-[2.5rem] !leading-none text-tenue transition-colors duration-300 group-hover:text-borra md:!text-[3.5rem]"
         aria-hidden="true"
       >
         {doisDigitos(edicao.numero)}

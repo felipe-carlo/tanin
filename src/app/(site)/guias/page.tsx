@@ -166,7 +166,7 @@ export default async function IndiceDeGuias({ searchParams }: Props) {
                   {grupo.guias.map((guia, indice) => (
                     <li key={guia.id}>
                       <article className="group relative flex gap-4 border-b border-fio py-6 md:gap-8">
-                        <span aria-hidden="true" className="rotulo w-8 flex-none pt-1 text-fio-forte">
+                        <span aria-hidden="true" className="rotulo w-8 flex-none pt-1 text-tenue">
                           {String(indice + 1).padStart(2, '0')}
                         </span>
                         <div className="min-w-0 flex-1">
@@ -175,7 +175,7 @@ export default async function IndiceDeGuias({ searchParams }: Props) {
                             <span>{guia.nivel === 'iniciante' ? 'Iniciante' : 'Intermediário'}</span>
                             {guia.dataAtualizacao && (
                               <>
-                                <span aria-hidden="true" className="text-fio-forte">
+                                <span aria-hidden="true" className="text-tenue">
                                   ·
                                 </span>
                                 <span>

@@ -102,7 +102,7 @@ export default async function PaginaDoGuia({ params }: Props) {
                   {tipoRotulo}
                 </Link>
               )}
-              <span aria-hidden="true" className="text-fio-forte">
+              <span aria-hidden="true" className="text-tenue">
                 ·
               </span>
               <span className="text-grafite">

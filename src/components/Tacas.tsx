@@ -60,7 +60,7 @@ export function Tacas({
 
   return (
     <div className="flex items-center gap-3">
-      <span className="flex items-center gap-1 text-fio-forte" aria-hidden="true">
+      <span className="flex items-center gap-1 text-tenue" aria-hidden="true">
         {Array.from({ length: NOTA_MAXIMA }, (_, indice) => (
           <Taca
             key={indice}

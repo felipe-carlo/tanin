@@ -153,7 +153,7 @@ export default async function PaginaDaMateria({ params }: Props) {
                   </Link>
                 </p>
               )}
-              <span aria-hidden="true" className="rotulo text-fio-forte">
+              <span aria-hidden="true" className="rotulo text-tenue">
                 ·
               </span>
               <p className="rotulo text-grafite">
@@ -161,7 +161,7 @@ export default async function PaginaDaMateria({ params }: Props) {
               </p>
               {materia.tempoLeitura ? (
                 <>
-                  <span aria-hidden="true" className="rotulo text-fio-forte">
+                  <span aria-hidden="true" className="rotulo text-tenue">
                     ·
                   </span>
                   <p className="rotulo text-grafite">{materia.tempoLeitura} min de leitura</p>

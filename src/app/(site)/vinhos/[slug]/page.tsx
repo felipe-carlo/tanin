@@ -117,7 +117,7 @@ export default async function PaginaDoVinho({ params }: Props) {
               <Link href={`/vinhos?tipo=${vinho.tipo}`} className="hover:underline">
                 {rotuloTipo(vinho.tipo)}
               </Link>
-              <span aria-hidden="true" className="text-fio-forte">
+              <span aria-hidden="true" className="text-tenue">
                 ·
               </span>
               <Link
@@ -351,7 +351,7 @@ export default async function PaginaDoVinho({ params }: Props) {
                           <span aria-hidden="true">→</span>
                         </a>
                         {loja.afiliado && (
-                          <p className="rotulo mt-1 text-fio-forte">Link de afiliado</p>
+                          <p className="rotulo mt-1 text-tenue">Link de afiliado</p>
                         )}
                       </li>
                     ))}

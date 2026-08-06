@@ -64,7 +64,7 @@ export default async function Home() {
               <p className="rotulo flex flex-wrap items-center gap-x-3 gap-y-1 text-borra">
                 <Chip cor={manchete.chipCor} tamanho="pequeno" />
                 {categoriaManchete?.nome && <span>{categoriaManchete.nome}</span>}
-                <span aria-hidden="true" className="text-fio-forte">
+                <span aria-hidden="true" className="text-tenue">
                   ·
                 </span>
                 <time dateTime={iso(manchete.dataPublicacao ?? manchete.createdAt)} className="text-grafite">
@@ -91,7 +91,7 @@ export default async function Home() {
                 {autorManchete && <span>Por {autorManchete.nome}</span>}
                 {manchete.tempoLeitura ? (
                   <>
-                    <span aria-hidden="true" className="text-fio-forte">
+                    <span aria-hidden="true" className="text-tenue">
                       ·
                     </span>
                     <span>{manchete.tempoLeitura} min de leitura</span>

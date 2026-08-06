@@ -21,3 +21,10 @@ next-env.d.ts
 *.log
 .vercel
 .turbo
+
+# artefatos de build
+tsconfig.tsbuildinfo
+
+# gerados pelo Next para agentes de IA
+AGENTS.md
+CLAUDE.md

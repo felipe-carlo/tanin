@@ -70,7 +70,7 @@ export function FormularioBoletim({
         {!compacto && (
           <div className="sm:col-span-2">
             <label htmlFor={idNome} className="rotulo block pb-1">
-              Nome <span className="normal-case tracking-normal opacity-60">(opcional)</span>
+              Nome <span className="normal-case tracking-normal">(opcional)</span>
             </label>
             <input id={idNome} name="nome" type="text" autoComplete="given-name" className="campo" />
           </div>

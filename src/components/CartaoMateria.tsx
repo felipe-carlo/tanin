@@ -69,7 +69,7 @@ export function CartaoMateria({
       <p className="rotulo flex flex-wrap items-center gap-x-2.5 gap-y-1 text-grafite">
         <Chip cor={conteudo.chipCor} tamanho="pequeno" />
         {categoria && <span>{categoria}</span>}
-        {categoria && data && <span aria-hidden="true" className="text-fio-forte">·</span>}
+        {categoria && data && <span aria-hidden="true" className="text-tenue">·</span>}
         {data && <time dateTime={iso(data)}>{dataPorExtenso(data)}</time>}
       </p>
 
@@ -87,7 +87,7 @@ export function CartaoMateria({
       )}
 
       {'tempoLeitura' in conteudo && conteudo.tempoLeitura ? (
-        <p className="rotulo mt-auto pt-4 text-fio-forte">{conteudo.tempoLeitura} min de leitura</p>
+        <p className="rotulo mt-auto pt-4 text-tenue">{conteudo.tempoLeitura} min de leitura</p>
       ) : null}
     </article>
   )
@@ -113,7 +113,7 @@ export function LinhaMateria({
         {typeof numero === 'number' && (
           <span
             aria-hidden="true"
-            className="rotulo w-6 flex-none pt-1 text-fio-forte"
+            className="rotulo w-6 flex-none pt-1 text-tenue"
           >
             {String(numero).padStart(2, '0')}
           </span>

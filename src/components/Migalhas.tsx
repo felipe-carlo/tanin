@@ -35,7 +35,7 @@ export function Migalhas({
                   >
                     {item.nome}
                   </Link>
-                  <span aria-hidden="true" className="rotulo text-fio-forte">
+                  <span aria-hidden="true" className="rotulo text-tenue">
                     /
                   </span>
                 </>

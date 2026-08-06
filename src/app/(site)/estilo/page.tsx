@@ -119,7 +119,7 @@ export default function PaginaDeEstilo() {
                         style={{ backgroundColor: faixa.hex }}
                       />
                       <div className="min-w-0">
-                        <p className="rotulo text-fio-forte">{numeroFaixa(faixa.numero)}</p>
+                        <p className="rotulo text-tenue">{numeroFaixa(faixa.numero)}</p>
                         <p className="font-[family-name:var(--font-display)] text-t4 leading-snug">
                           {faixa.nome}
                         </p>

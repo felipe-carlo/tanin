@@ -17,7 +17,8 @@
   --color-borra-escura: #4e1620;
   --color-grafite: #4a4744; /* texto secundário */
   --color-fio: #ddd8d0; /* hairlines e divisórias */
-  --color-fio-forte: #c3bcb1;
+  --color-fio-forte: #c3bcb1; /* SÓ para traço e borda — não passa contraste em texto */
+  --color-tenue: #6e6a64; /* texto de terceiro plano: numeração, separadores, marcas */
   --color-papel-fundo: #f2eee7; /* segundo plano, para blocos que precisam recuar */
 
   /* --- Tipografia --------------------------------------------------------- */
