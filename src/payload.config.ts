@@ -65,6 +65,8 @@ export default buildConfig({
   admin: {
     user: Usuarios.slug,
     importMap: { baseDir: path.resolve(dirname) },
+    // Data como se escreve em português: 06/08/2026 às 20:05, e não "August 6th, 8:05 PM".
+    dateFormat: "dd/MM/yyyy 'às' HH:mm",
     meta: {
       titleSuffix: ' · Painel Tanin',
       description: 'Painel de publicação da Tanin',
@@ -83,10 +85,32 @@ export default buildConfig({
       ],
     },
   },
-  // O painel fala português. O inglês fica disponível só como rede de segurança.
+  /**
+   * O painel fala português. O inglês fica disponível só como rede de segurança.
+   *
+   * A tradução oficial do Payload deixa alguns termos em inglês — "Login", "Email",
+   * "Log out". Num painel que uma jornalista vai abrir todo dia, isso é justamente o
+   * tipo de detalhe que faz a ferramenta parecer emprestada de outra pessoa.
+   */
   i18n: {
     supportedLanguages: { pt, en },
     fallbackLanguage: 'pt',
+    translations: {
+      pt: {
+        authentication: {
+          login: 'Entrar',
+          logOut: 'Sair',
+          logout: 'Sair',
+          emailAddress: 'E-mail',
+          forgotPasswordQuestion: 'Esqueceu a senha?',
+        },
+        general: {
+          email: 'E-mail',
+          createNew: 'Criar',
+          showAllLabel: 'Mostrar todos',
+        },
+      },
+    },
   },
   localization: false,
   collections: [
