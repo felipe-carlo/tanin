@@ -142,7 +142,7 @@ export default async function IndiceDeMaterias({ searchParams }: Props) {
               <div className="mt-12 border-b border-tinta pb-12">
                 <div className="grade">
                   <div className="col-span-6 lg:col-span-7">
-                    <CartaoMateria conteudo={primeira} tamanho="grande" prioridade />
+                    <CartaoMateria conteudo={primeira} tamanho="grande" prioridade nivel={2} />
                   </div>
                 </div>
               </div>
@@ -151,7 +151,7 @@ export default async function IndiceDeMaterias({ searchParams }: Props) {
             <div className="grade mt-12">
               {(pagina === 1 ? demais : resultado.docs).map((materia) => (
                 <div key={materia.id} className="revelar-ao-rolar col-span-6 lg:col-span-4">
-                  <CartaoMateria conteudo={materia} tamanho="medio" />
+                  <CartaoMateria conteudo={materia} tamanho="medio" nivel={2} />
                 </div>
               ))}
             </div>

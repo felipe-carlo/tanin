@@ -243,7 +243,10 @@ export default async function PaginaSobre() {
           </div>
 
           {/* Credenciais no trilho lateral — o que sustenta a autoridade. */}
-          <aside className="col-span-6 lg:col-span-3 lg:col-start-10">
+          {/* Um `div`, e não um `aside`: cada bloco aqui dentro já é uma `section` com
+              título próprio, que é o que leitor de tela usa para navegar. O `aside`
+              aninhado no artigo não acrescentaria informação nenhuma. */}
+          <div className="col-span-6 lg:col-span-3 lg:col-start-10">
             <div className="space-y-12 lg:sticky lg:top-[calc(var(--altura-cabecalho)+2rem)]">
               {autora?.credenciais && autora.credenciais.length > 0 && (
                 <section>
@@ -290,7 +293,7 @@ export default async function PaginaSobre() {
                 </ul>
               </nav>
             </div>
-          </aside>
+          </div>
         </div>
       </div>
 

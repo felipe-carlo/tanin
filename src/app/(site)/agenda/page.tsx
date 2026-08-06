@@ -162,7 +162,7 @@ function LinhaDeEvento({ evento }: { evento: Evento }) {
         </p>
 
         {(evento.preco || evento.organizador) && (
-          <p className="rotulo mt-3 text-grafite/75">
+          <p className="rotulo mt-3 text-grafite">
             {[evento.preco, evento.organizador].filter(Boolean).join(' · ')}
           </p>
         )}

@@ -135,7 +135,7 @@ export default async function PaginaDoGuia({ params }: Props) {
           {/* "O que levar" — a versão curta do guia, no alto, para quem tem pressa.
               É também o bloco mais citável da página. */}
           {guia.paraLevar && guia.paraLevar.length > 0 && (
-            <aside className="col-span-6 lg:col-span-3 lg:col-start-10">
+            <div className="col-span-6 lg:col-span-3 lg:col-start-10">
               <h2 className="rotulo border-b border-tinta pb-3">Em resumo</h2>
               <ul className="mt-4 space-y-3.5">
                 {guia.paraLevar.map((ponto, indice) => (
@@ -145,7 +145,7 @@ export default async function PaginaDoGuia({ params }: Props) {
                   </li>
                 ))}
               </ul>
-            </aside>
+            </div>
           )}
         </header>
 
@@ -175,7 +175,10 @@ export default async function PaginaDoGuia({ params }: Props) {
             {autor && <BlocoAutor autor={autor} />}
           </div>
 
-          <aside className="col-span-6 lg:col-span-3 lg:col-start-10">
+          {/* Um `div`, e não um `aside`: cada bloco aqui dentro já é uma `section` com
+              título próprio, que é o que leitor de tela usa para navegar. O `aside`
+              aninhado no artigo não acrescentaria informação nenhuma. */}
+          <div className="col-span-6 lg:col-span-3 lg:col-start-10">
             <div className="space-y-12 lg:sticky lg:top-[calc(var(--altura-cabecalho)+2rem)]">
               {relacionados.length > 0 && (
                 <section>
@@ -224,7 +227,7 @@ export default async function PaginaDoGuia({ params }: Props) {
                 </section>
               )}
             </div>
-          </aside>
+          </div>
         </div>
       </article>
 

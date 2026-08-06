@@ -22,7 +22,10 @@ export interface FaixaCromatica {
   nome: string
   /** Hex da faixa. */
   hex: string
-  /** Cor de texto legível sobre a faixa (contraste AA garantido). */
+  /**
+   * Cor de texto legível sobre a faixa. Escolhida por cálculo, não a olho: é sempre
+   * tinta ou papel, o que der a maior razão de contraste, e as 14 passam de 4,5:1.
+   */
   contraste: string
   /** Família de vinho a que a faixa pertence. */
   familia: FamiliaVinho
@@ -72,7 +75,7 @@ export const ESCALA_CROMATICA: readonly FaixaCromatica[] = [
     numero: 5,
     nome: 'Âmbar',
     hex: '#B87E25',
-    contraste: '#FAF8F5',
+    contraste: '#14110F',
     familia: 'branco',
     descricao: 'Branco de guarda longa, já oxidativo. Jerez, brancos do Jura, colheitas antigas.',
   },
@@ -81,7 +84,7 @@ export const ESCALA_CROMATICA: readonly FaixaCromatica[] = [
     numero: 6,
     nome: 'Laranja',
     hex: '#C46A24',
-    contraste: '#FAF8F5',
+    contraste: '#14110F',
     familia: 'laranja',
     descricao: 'Uva branca fermentada com as cascas. Ribolla Gialla, Rkatsiteli, âmbar georgiano.',
   },

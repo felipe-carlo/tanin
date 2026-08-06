@@ -21,20 +21,28 @@ const enderecoDe = (conteudo: Conteudo): string =>
 /**
  * Cartão de matéria com imagem.
  *
- * `tamanho` controla a hierarquia: uma página com todos os cartões do mesmo peso é
- * uma lista, não uma capa. A revista decide o que é grande e o que é pequeno.
+ * `tamanho` controla a hierarquia visual: uma página com todos os cartões do mesmo
+ * peso é uma lista, não uma capa. A revista decide o que é grande e o que é pequeno.
+ *
+ * `nivel` controla a hierarquia semântica, que é outra coisa. Num índice, o cartão vem
+ * logo depois do `h1` da página e precisa ser `h2`; dentro de uma seção que já tem um
+ * `h2` próprio, precisa ser `h3`. Pular de h1 para h3 confunde quem navega por títulos
+ * com leitor de tela — é o modo mais comum de percorrer uma página desse jeito.
  */
 export function CartaoMateria({
   conteudo,
   tamanho = 'medio',
   prioridade = false,
   mostrarResumo = true,
+  nivel = 3,
 }: {
   conteudo: Conteudo
   tamanho?: 'pequeno' | 'medio' | 'grande'
   prioridade?: boolean
   mostrarResumo?: boolean
+  nivel?: 2 | 3
 }) {
+  const Titulo = nivel === 2 ? 'h2' : 'h3'
   const categoria = categoriaDe(conteudo)
   const data = conteudo.dataPublicacao ?? conteudo.createdAt
   const temImagem = conteudo.destaque?.imagem && typeof conteudo.destaque.imagem === 'object'
@@ -73,12 +81,12 @@ export function CartaoMateria({
         {data && <time dateTime={iso(data)}>{dataPorExtenso(data)}</time>}
       </p>
 
-      <h3 className={`mt-2.5 leading-tight ${classesTitulo}`}>
+      <Titulo className={`mt-2.5 leading-tight ${classesTitulo}`}>
         <Link href={enderecoDe(conteudo)} className="link-titulo">
           <span className="absolute inset-0" aria-hidden="true" />
           {conteudo.titulo}
         </Link>
-      </h3>
+      </Titulo>
 
       {mostrarResumo && conteudo.resumo && (
         <p className="mt-3 text-apoio leading-relaxed text-grafite linhas-3 bonito">
@@ -100,10 +108,13 @@ export function CartaoMateria({
 export function LinhaMateria({
   conteudo,
   numero,
+  nivel = 3,
 }: {
   conteudo: Conteudo
   numero?: number
+  nivel?: 2 | 3
 }) {
+  const Titulo = nivel === 2 ? 'h2' : 'h3'
   const categoria = categoriaDe(conteudo)
   const data = conteudo.dataPublicacao ?? conteudo.createdAt
 
@@ -124,12 +135,12 @@ export function LinhaMateria({
             {categoria && <span>{categoria}</span>}
             {data && <time dateTime={iso(data)}>{dataPorExtenso(data)}</time>}
           </p>
-          <h3 className="mt-2 text-t4 leading-tight">
+          <Titulo className="mt-2 text-t4 leading-tight">
             <Link href={enderecoDe(conteudo)} className="link-titulo">
               <span className="absolute inset-0" aria-hidden="true" />
               {conteudo.titulo}
             </Link>
-          </h3>
+          </Titulo>
           {conteudo.resumo && (
             <p className="mt-2 max-w-prose text-apoio leading-relaxed text-grafite linhas-2 bonito">
               {conteudo.resumo}

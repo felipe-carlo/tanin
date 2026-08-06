@@ -229,7 +229,10 @@ export default async function PaginaDoVinho({ params }: Props) {
           </div>
 
           {/* Trilho de dados — a parte "Wine Folly" da página. */}
-          <aside className="col-span-6 lg:col-span-4 lg:col-start-9">
+          {/* Um `div`, e não um `aside`: cada bloco aqui dentro já é uma `section` com
+              título próprio, que é o que leitor de tela usa para navegar. O `aside`
+              aninhado no artigo não acrescentaria informação nenhuma. */}
+          <div className="col-span-6 lg:col-span-4 lg:col-start-9">
             <div className="space-y-12">
               <FichaTecnica
                 titulo="Ficha"
@@ -386,7 +389,7 @@ export default async function PaginaDoVinho({ params }: Props) {
                 </time>
               </p>
             </div>
-          </aside>
+          </div>
         </div>
       </article>
 

@@ -50,7 +50,7 @@ export function FitaCromatica({
                 <span
                   aria-hidden="true"
                   className="font-[family-name:var(--font-rotulo)] text-[0.625rem] font-semibold tracking-[0.1em]"
-                  style={{ color: faixa.contraste, opacity: 0.8 }}
+                  style={{ color: faixa.contraste }}
                 >
                   {doisDigitos(edicao.numero)}
                 </span>

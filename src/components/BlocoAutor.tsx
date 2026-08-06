@@ -15,7 +15,7 @@ export function BlocoAutor({ autor }: { autor: Autor }) {
   const temFoto = autor.foto && typeof autor.foto === 'object'
 
   return (
-    <aside className="mt-16 border-t border-tinta pt-8">
+    <section className="mt-16 border-t border-tinta pt-8" aria-labelledby="quem-escreveu">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
         {temFoto && (
           <div className="w-24 flex-none sm:w-28">
@@ -30,7 +30,7 @@ export function BlocoAutor({ autor }: { autor: Autor }) {
         )}
 
         <div className="min-w-0">
-          <p className="rotulo text-grafite">Quem escreveu</p>
+          <p className="rotulo text-grafite" id="quem-escreveu">Quem escreveu</p>
           <h2 className="mt-2 text-t3 leading-tight">
             <Link href="/sobre" className="link-titulo">
               {autor.nome}
@@ -61,6 +61,6 @@ export function BlocoAutor({ autor }: { autor: Autor }) {
           </div>
         </div>
       </div>
-    </aside>
+    </section>
   )
 }

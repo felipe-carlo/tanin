@@ -138,9 +138,12 @@ export default async function PaginaDaEdicao({ params }: Props) {
             <TextoRico dados={edicao.corpo} />
           </div>
 
-          {/* Índice dos blocos: permite mandar alguém direto para um trecho. */}
+          {/* Índice dos blocos: permite mandar alguém direto para um trecho.
+              É um `div` e não um `aside` porque o `nav` de dentro já é o marco que
+              leitor de tela usa para navegar — o `aside` aninhado no artigo não
+              acrescentaria informação nenhuma. */}
           {blocos.length > 0 && (
-            <aside className="col-span-6 lg:col-span-3 lg:col-start-10">
+            <div className="col-span-6 lg:col-span-3 lg:col-start-10">
               <nav
                 aria-label="Nesta edição"
                 className="lg:sticky lg:top-[calc(var(--altura-cabecalho)+2rem)]"
@@ -159,7 +162,7 @@ export default async function PaginaDaEdicao({ params }: Props) {
                   ))}
                 </ol>
               </nav>
-            </aside>
+            </div>
           )}
         </div>
 

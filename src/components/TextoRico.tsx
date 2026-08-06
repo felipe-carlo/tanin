@@ -100,18 +100,23 @@ const conversores: JSXConvertersFunction = ({ defaultConverters }) => ({
 
   blocks: {
     // Citação em destaque, à maneira de revista.
+    // `figure` com `blockquote` e `figcaption`: é a marcação que diz "isto é uma
+    // citação, e quem disse foi fulano". Um `aside` diria "isto é conteúdo à parte",
+    // que é o oposto do que uma citação em destaque é — ela vem do próprio texto.
     destaque: ({ node }: NoDeBloco<{ texto: string; autoria?: string }>) => {
       const { texto, autoria } = node.fields
       return (
-        <aside className="my-12 border-y border-tinta py-8 md:-mx-8 md:px-8">
-          <p
+        <figure className="my-12 border-y border-tinta py-8 md:-mx-8 md:px-8">
+          <blockquote
             className="font-[family-name:var(--font-display)] text-t2 leading-[1.15] tracking-[-0.02em] equilibrado"
             style={{ fontVariationSettings: "'SOFT' 30, 'WONK' 1", fontWeight: 400 }}
           >
             {texto}
-          </p>
-          {autoria && <p className="rotulo mt-5 text-grafite">{autoria}</p>}
-        </aside>
+          </blockquote>
+          {autoria && (
+            <figcaption className="rotulo mt-5 !border-0 !pt-0 text-grafite">{autoria}</figcaption>
+          )}
+        </figure>
       )
     },
 
@@ -119,10 +124,10 @@ const conversores: JSXConvertersFunction = ({ defaultConverters }) => ({
     caixa: ({ node }: NoDeBloco<{ titulo: string; texto: string }>) => {
       const { titulo, texto } = node.fields
       return (
-        <aside className="my-10 border-l-2 border-borra bg-papel-fundo px-6 py-6">
-          <h3 className="rotulo !text-borra">{titulo}</h3>
+        <div className="my-10 border-l-2 border-borra bg-papel-fundo px-6 py-6">
+          <p className="rotulo text-borra">{titulo}</p>
           <p className="mt-3 text-apoio leading-relaxed">{texto}</p>
-        </aside>
+        </div>
       )
     },
 

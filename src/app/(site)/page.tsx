@@ -159,17 +159,17 @@ export default async function Home() {
           <div className="grade">
             {destaqueA && (
               <div className="revelar-ao-rolar col-span-6 lg:col-span-5">
-                <CartaoMateria conteudo={destaqueA} tamanho="medio" />
+                <CartaoMateria conteudo={destaqueA} tamanho="medio" nivel={2} />
               </div>
             )}
             {destaqueB && (
               <div className="revelar-ao-rolar col-span-6 lg:col-span-4">
-                <CartaoMateria conteudo={destaqueB} tamanho="medio" />
+                <CartaoMateria conteudo={destaqueB} tamanho="medio" nivel={2} />
               </div>
             )}
             {destaqueC && (
               <div className="revelar-ao-rolar col-span-6 border-t border-tinta pt-5 lg:col-span-3 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-                <CartaoMateria conteudo={destaqueC} tamanho="pequeno" mostrarResumo />
+                <CartaoMateria conteudo={destaqueC} tamanho="pequeno" mostrarResumo nivel={2} />
               </div>
             )}
           </div>
@@ -186,8 +186,11 @@ export default async function Home() {
                   ))}
                 </div>
 
+                {/* Um `div` e não um `aside`: o `h3` "Para entender" já dá a este bloco
+                    um nome pelo qual leitor de tela navega, e um marco de página
+                    aninhado dentro do `main` só acrescentaria ruído. */}
                 {guias.docs.length > 0 && (
-                  <aside className="col-span-6 lg:col-span-3 lg:col-start-10">
+                  <div className="col-span-6 lg:col-span-3 lg:col-start-10">
                     <h3 className="rotulo border-b border-tinta pb-3">Para entender</h3>
                     <ul className="mt-4 space-y-4">
                       {guias.docs.slice(0, 5).map((guia) => (
@@ -207,7 +210,7 @@ export default async function Home() {
                     <Link href="/guias" className="rotulo mt-6 inline-block text-grafite hover:text-borra">
                       Todos os guias <span aria-hidden="true">→</span>
                     </Link>
-                  </aside>
+                  </div>
                 )}
               </div>
             </div>

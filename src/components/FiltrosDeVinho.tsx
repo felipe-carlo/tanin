@@ -85,10 +85,12 @@ function Opcao({
   children: React.ReactNode
 }) {
   return (
+    // `aria-pressed` valeria num botão. Estes são links de verdade — cada filtro tem
+    // endereço próprio — e o estado de um link se anuncia com `aria-current`.
     <Link
       href={endereco}
       scroll={false}
-      aria-pressed={ativo}
+      aria-current={ativo ? 'true' : undefined}
       className={`flex min-h-11 items-center gap-2.5 py-1.5 text-apoio transition-colors ${
         ativo ? 'text-borra' : 'text-grafite hover:text-tinta'
       }`}
