@@ -926,8 +926,11 @@ async function principal(): Promise<number> {
       : `Entrando como ${opcoes.publicar ? 'PUBLICADO' : 'RASCUNHO (padrão — revise antes de publicar)'}.\n`,
   )
 
-  // A configuração só é importada agora porque ela lê o .env na hora em que é
-  // carregada — e porque no modo seco sem chave o banco nem precisa ser tocado.
+  // A configuração entra por importação dinâmica porque ela lê as variáveis de
+  // ambiente no instante em que é carregada — e o `.env` só foi lido lá embaixo,
+  // depois que este arquivo já tinha resolvido todos os `import` do topo.
+  // Mesmo no ensaio o banco é consultado: é o que permite dizer "criar" ou
+  // "atualizar" de verdade, em vez de chutar.
   const { getPayload } = await import('payload')
   const { default: config } = await import('@/payload.config')
   const payload = await getPayload({ config })
@@ -1025,8 +1028,8 @@ async function principal(): Promise<number> {
 
   console.log('\n──────────────────────────────────────────────')
   console.log(opcoes.seco ? 'Ensaio (nada foi gravado)' : 'Importação concluída')
-  console.log(`  criadas:     ${opcoes.seco ? 0 : criadas}`)
-  console.log(`  atualizadas: ${opcoes.seco ? 0 : atualizadas}`)
+  console.log(`  criadas:     ${criadas}`)
+  console.log(`  atualizadas: ${atualizadas}`)
   console.log(`  puladas:     ${puladas}`)
   console.log(`  avisos:      ${avisos.length}`)
 

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Chip } from '@/components/Chip'
 import { Imagem } from '@/components/Imagem'
 import { NotaCompacta, Tacas } from '@/components/Tacas'
-import { faixaPorId } from '@/lib/escala-cores'
+import { faixaPorId, type FaixaCromatica } from '@/lib/escala-cores'
 import { descreverProcedencia, descreverUvas, rotuloPreco, rotuloTipo } from '@/lib/vinho'
 import type { Vinho } from '@/payload-types'
 
@@ -63,6 +63,47 @@ export function CartaoVinhoLinha({ vinho }: { vinho: Vinho }) {
   )
 }
 
+/**
+ * O que aparece quando a ficha ainda não tem foto.
+ *
+ * A saída óbvia seria um retângulo chapado na cor do vinho, mas quatro deles em fila
+ * viram uma parede de cor que rouba a página inteira. Aqui a cor entra onde ela de fato
+ * está — dentro da taça —, sobre papel. Continua informando a mesma coisa e pesa um
+ * décimo do que pesava.
+ */
+function SilhuetaDaTaca({ faixa }: { faixa: FaixaCromatica }) {
+  return (
+    <div
+      className="relative flex items-center justify-center border border-fio bg-papel-fundo"
+      style={{ aspectRatio: '3 / 4' }}
+    >
+      <svg
+        viewBox="0 0 16 24"
+        className="h-[62%] w-auto"
+        fill="none"
+        aria-hidden="true"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <path
+          d="M2.2 1.2h11.6c0 6-1.6 9.6-5.8 10.2C3.8 10.8 2.2 7.2 2.2 1.2Z"
+          fill={faixa.hex}
+        />
+        <path
+          d="M2.2 1.2h11.6c0 6-1.6 9.6-5.8 10.2C3.8 10.8 2.2 7.2 2.2 1.2Z"
+          stroke="var(--color-tinta)"
+          strokeWidth="0.5"
+          strokeLinejoin="round"
+        />
+        <path d="M8 11.4v8.4" stroke="var(--color-tinta)" strokeWidth="0.5" strokeLinecap="round" />
+        <path d="M4.4 22.4h7.2" stroke="var(--color-tinta)" strokeWidth="0.5" strokeLinecap="round" />
+      </svg>
+      <span className="rotulo absolute inset-x-0 bottom-3 text-center text-tenue">
+        {faixa.nome}
+      </span>
+    </div>
+  )
+}
+
 /** Cartão com imagem — usado na home e no fim das matérias. */
 export function CartaoVinho({ vinho, prioridade = false }: { vinho: Vinho; prioridade?: boolean }) {
   const faixa = faixaPorId(vinho.corNaEscala)
@@ -81,18 +122,7 @@ export function CartaoVinho({ vinho, prioridade = false }: { vinho: Vinho; prior
             className="transition-transform duration-700 ease-[cubic-bezier(0.2,0.7,0.25,1)] group-hover:scale-[1.03]"
           />
         ) : (
-          // Sem foto, a cor da taça ocupa o lugar da imagem. A ausência vira sistema.
-          <div
-            className="flex items-end p-4"
-            style={{ aspectRatio: '3 / 4', backgroundColor: faixa.hex }}
-          >
-            <span
-              className="rotulo"
-              style={{ color: faixa.contraste, opacity: 0.75 }}
-            >
-              {faixa.nome}
-            </span>
-          </div>
+          <SilhuetaDaTaca faixa={faixa} />
         )}
       </div>
 
