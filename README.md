@@ -113,13 +113,33 @@ subir para produção, `pnpm migrate:criar <nome-do-que-mudou>`.
 
 ## Deploy na Vercel
 
-1. Conecte o repositório. A Vercel detecta Next.js sozinha; o `vercel.json` já manda
+1. **Conecte o repositório.** A Vercel detecta Next.js sozinha; o `vercel.json` já manda
    rodar as migrações antes de construir o site.
-2. Preencha as variáveis de ambiente — a lista comentada está em `.env.example`.
-   As obrigatórias são `DATABASE_URI`, `PAYLOAD_SECRET` e `NEXT_PUBLIC_URL_SITE`.
-3. No Supabase, use a **Transaction pooler** (porta 6543) e ligue `DATABASE_SSL=true`.
-4. Configure o armazenamento de imagens (as quatro variáveis `S3_*`). Sem isso, cada
-   deploy apaga as imagens enviadas pelo painel — a Vercel não guarda arquivos.
+
+2. **Preencha as variáveis de ambiente** em *Settings → Environment Variables*. É aí que
+   a senha do banco deve morar: fica criptografada e não passa por arquivo nenhum.
+   As obrigatórias são três:
+
+   | Variável | Onde achar |
+   | --- | --- |
+   | `DATABASE_URI` | Supabase → *Project Settings* → *Database* → *Connection string* → **URI**, opção **Transaction pooler** (porta 6543) |
+   | `PAYLOAD_SECRET` | gere: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+   | `NEXT_PUBLIC_URL_SITE` | o endereço final do portal, sem barra no fim |
+
+   Acrescente também `DATABASE_SSL=true` — o Supabase exige conexão criptografada.
+
+3. **O primeiro deploy cria o banco sozinho.** O comando de build roda `payload migrate`
+   antes de construir, e as migrações estão versionadas em `src/migrations/`. Você não
+   precisa rodar nada à mão no Supabase.
+
+4. **Crie o primeiro acesso.** Abra `SEU-ENDERECO/admin`. Como ainda não existe ninguém,
+   o painel mostra a tela de primeiro usuário: nome, e-mail e senha. **Essa primeira
+   pessoa vira administradora automaticamente** — é a única que pode criar outros
+   usuários e apagar conteúdo.
+
+5. **Configure o armazenamento de imagens** (as quatro variáveis `S3_*`). Sem isso o site
+   funciona, mas cada deploy apaga as imagens enviadas pelo painel — a Vercel não guarda
+   arquivos entre deploys.
 
 ---
 
