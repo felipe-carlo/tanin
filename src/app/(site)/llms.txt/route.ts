@@ -30,6 +30,17 @@ const secao = (titulo: string, linhas: string[]): string[] =>
 const publico = (documento: { seo?: { naoIndexar?: boolean | null } | null }): boolean =>
   !documento.seo?.naoIndexar
 
+/** Lista vazia quando a consulta falha: um mapa menor é melhor que um erro 500. */
+async function semQuebrar<T>(
+  consulta: Promise<{ docs: T[]; totalDocs: number }>,
+): Promise<{ docs: T[]; totalDocs: number }> {
+  try {
+    return await consulta
+  } catch {
+    return { docs: [], totalDocs: 0 }
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /* As duas réguas do portal, explicadas em uma frase cada                      */
 /* -------------------------------------------------------------------------- */
@@ -48,10 +59,10 @@ const ESCALA_DE_NOTA = `de ${NOTA_MINIMA} a ${NOTA_MAXIMA} taças, em degraus de
 export async function GET(): Promise<Response> {
   const [config, guias, vinhos, materias, edicoes] = await Promise.all([
     obterConfiguracoes(),
-    listarGuias({ limite: 500 }),
-    listarVinhos({ limite: 40 }),
-    listarMaterias({ limite: 40 }),
-    listarEdicoes({ limite: 20 }),
+    semQuebrar(listarGuias({ limite: 500 })),
+    semQuebrar(listarVinhos({ limite: 40 })),
+    semQuebrar(listarMaterias({ limite: 40 })),
+    semQuebrar(listarEdicoes({ limite: 20 })),
   ])
 
   const nome = config.nomeSite ?? NOME_SITE
@@ -112,7 +123,10 @@ export async function GET(): Promise<Response> {
     ]),
 
     ...secao('Como navegar', [
-      link('Escala cromática do vinho', '/estilo', ESCALA_DE_COR),
+      // A escala é explicada em /sobre. A página /estilo, que também a desenha, é a
+      // referência interna do sistema de design e se declara `noindex`: mandar um
+      // modelo para lá contradiz o que o próprio site diz aos robôs.
+      link('Escala cromática do vinho', '/sobre#a-escala', ESCALA_DE_COR),
       link('Escala de notas', '/sobre#como-avaliamos', ESCALA_DE_NOTA),
       link('Busca no acervo', '/busca', 'Busca em matérias, edições do boletim, fichas de vinho e guias ao mesmo tempo.'),
     ]),

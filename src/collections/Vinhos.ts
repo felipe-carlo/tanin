@@ -5,6 +5,7 @@ import { ganchosDeRevalidacao } from '@/hooks/revalidar'
 import { editorTanin } from '@/fields/editor'
 import { campoFaq, grupoSeo } from '@/fields/seo'
 import { campoSlug } from '@/fields/slug'
+import { campoIndiceBusca, montarIndiceBusca } from '@/fields/busca'
 import { campoDataAtualizacao, campoDataPublicacao, grupoImagemDestaque } from '@/fields/comuns'
 import { OPCOES_ESCALA } from '@/lib/escala-cores'
 import { NOTA_MAXIMA, NOTA_MINIMA, PASSO_NOTA } from '@/lib/nota'
@@ -327,6 +328,7 @@ export const Vinhos: CollectionConfig = {
       ],
     },
     campoSlug('nome'),
+    campoIndiceBusca,
     {
       name: 'autor',
       type: 'relationship',
@@ -352,6 +354,14 @@ export const Vinhos: CollectionConfig = {
         if (operation === 'update' && originalDoc?._status === 'published') {
           data.dataAtualizacao = new Date().toISOString()
         }
+        data.indiceBusca = montarIndiceBusca([
+          data?.nome,
+          data?.produtor,
+          data?.pais,
+          data?.subRegiao,
+          data?.safra,
+          data?.veredito,
+        ])
         return data
       },
     ],

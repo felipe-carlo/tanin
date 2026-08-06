@@ -8,6 +8,7 @@ import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical
 
 import { Figura } from '@/components/Imagem'
 import { CartaoVinhoLinha } from '@/components/CartaoVinho'
+import { paraSlug } from '@/fields/slug'
 import type { Midia, Vinho } from '@/payload-types'
 
 /**
@@ -37,12 +38,38 @@ const enderecoInterno = (relacao?: string | null, valor?: unknown): string => {
   return slug ? `${prefixo}/${slug}` : prefixo
 }
 
+/** Texto puro de um nó do editor, para derivar a âncora de um título. */
+const textoDoNo = (no: unknown): string => {
+  if (!no || typeof no !== 'object') return ''
+  const registro = no as { text?: unknown; children?: unknown[] }
+  if (typeof registro.text === 'string') return registro.text
+  if (Array.isArray(registro.children)) return registro.children.map(textoDoNo).join('')
+  return ''
+}
+
 const conversores: JSXConvertersFunction = ({ defaultConverters }) => ({
   ...defaultConverters,
   ...LinkJSXConverter({
     internalDocToHref: ({ linkNode }) =>
       enderecoInterno(linkNode.fields.doc?.relationTo, linkNode.fields.doc?.value),
   }),
+
+  /**
+   * Todo título ganha um `id` derivado do próprio texto.
+   *
+   * Sem isso, o índice "Nesta edição" — que aponta para `#alguma-coisa` — leva a lugar
+   * nenhum, e ninguém consegue mandar a alguém o link de um trecho específico. A regra
+   * de conversão é a mesma do campo de âncora do painel, então os dois lados batem.
+   */
+  heading: ({ node, nodesToJSX }) => {
+    const Marcacao = node.tag as 'h2' | 'h3' | 'h4'
+    const id = paraSlug(textoDoNo(node))
+    return (
+      <Marcacao id={id || undefined} className="scroll-mt-28">
+        {nodesToJSX({ nodes: node.children })}
+      </Marcacao>
+    )
+  },
 
   // Imagem no meio do texto, com legenda e crédito em `<figure>` de verdade.
   upload: ({ node }) => {

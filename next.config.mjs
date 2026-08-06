@@ -15,6 +15,9 @@ const nextConfig = {
   // O admin do Payload é pesado; deixá-lo fora do bundle do site é o padrão do plugin.
   experimental: {
     optimizePackageImports: ['@payloadcms/ui'],
+    // Liga o `app/global-not-found.tsx`: sem ele, um endereço que não bate com rota
+    // nenhuma cai na tela branca padrão do Next, em inglês e sem saída.
+    globalNotFound: true,
   },
   // Redireciona URLs antigas conhecidas para as rotas canônicas do portal.
   async redirects() {

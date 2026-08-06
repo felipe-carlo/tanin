@@ -107,6 +107,15 @@ pnpm importar:beehiiv
 Pode rodar quantas vezes quiser: a importação reconhece o que já trouxe e atualiza
 em vez de duplicar. Se algo der errado no meio, é só rodar de novo.
 
+**Se o número já estiver ocupado.** A importação numera as edições pela data — 1 é a
+mais antiga. Quando um desses números já pertence a uma edição que *não* veio do
+beehiiv (escrita à mão pelo painel, por exemplo), ela é pulada, nada é alterado, e o
+aviso no fim diz qual edição está no caminho. É de propósito: apagar por cima do que
+alguém escreveu seria pior do que parar. Para resolver, abra a edição citada no painel
+e mude o número dela — ou apague, se for a mesma edição em duplicidade — e rode de
+novo. **É por isso que os dois caminhos da seção 2 não se misturam:** ou a importação
+traz tudo, ou as edições entram à mão. Fazer metade de cada um dá trabalho dobrado.
+
 **Um aviso importante:** "atualiza" quer dizer que o texto vindo do beehiiv volta a
 sobrescrever o que estiver na edição. Rode quantas vezes precisar **antes** de
 começar a revisar; depois que a revisão começou, não rode mais — o trabalho de

@@ -1,6 +1,7 @@
 import { cache } from 'react'
 import type { Where } from 'payload'
 
+import { normalizarParaBusca } from '@/fields/busca'
 import { obterPayload } from '@/lib/payload'
 import type { Edicao, Evento, Guia, Materia, Vinho } from '@/payload-types'
 
@@ -360,48 +361,54 @@ export type ResultadoDeBusca = {
 /**
  * Busca no acervo inteiro.
  *
- * Usa o `like` do Postgres em vez de um serviço externo de busca. Para um acervo da
- * ordem de milhares de documentos, isso resolve bem, custa zero e não acrescenta um
- * serviço a manter. Se um dia o acervo crescer a ponto de a busca ficar lenta, o
- * lugar para trocar a implementação é este — e só este.
+ * Procura no `indiceBusca` — a cópia sem acento e em caixa baixa que cada documento
+ * guarda de si mesmo. É o que faz "regiao" encontrar "região" e "sao paulo" encontrar
+ * "São Paulo", que é como as pessoas de fato digitam no celular.
+ *
+ * Cada palavra da consulta precisa aparecer, mas não necessariamente juntas nem na
+ * mesma ordem: "malbec argentina" acha uma ficha que diz "Malbec de Mendoza, Argentina".
+ *
+ * Usa o `like` do Postgres em vez de um serviço externo. Para um acervo da ordem de
+ * milhares de documentos isso resolve bem, custa zero e não acrescenta um serviço a
+ * manter. Se um dia ficar lento, o lugar para trocar a implementação é este — e só este.
  */
 export const buscar = cache(async (termo: string): Promise<ResultadoDeBusca[]> => {
-  const consulta = termo.trim()
+  const consulta = normalizarParaBusca(termo)
   if (consulta.length < 2) return []
 
-  const payload = await obterPayload()
-  const contem = (campos: string[]): Where => ({
-    or: campos.map((campo) => ({ [campo]: { like: consulta } })),
-  })
+  const palavras = consulta.split(' ').filter((palavra) => palavra.length >= 2).slice(0, 6)
+  if (palavras.length === 0) return []
 
+  const contem: Where = {
+    and: palavras.map((palavra) => ({ indiceBusca: { like: palavra } })),
+  }
+
+  const payload = await obterPayload()
   const [materias, edicoes, vinhos, guias] = await Promise.all([
     payload.find({
       collection: 'materias',
-      where: combinar(publicado(), contem(['titulo', 'subtitulo', 'resumo'])),
+      where: combinar(publicado(), contem),
       limit: 12,
       depth: 0,
       overrideAccess: false,
     }),
     payload.find({
       collection: 'edicoes',
-      where: combinar(publicado(), contem(['titulo', 'subtitulo', 'resumo'])),
+      where: combinar(publicado(), contem),
       limit: 12,
       depth: 0,
       overrideAccess: false,
     }),
     payload.find({
       collection: 'vinhos',
-      where: combinar(
-        publicado(),
-        contem(['nome', 'produtor', 'veredito', 'pais', 'subRegiao']),
-      ),
+      where: combinar(publicado(), contem),
       limit: 12,
       depth: 0,
       overrideAccess: false,
     }),
     payload.find({
       collection: 'guias',
-      where: combinar(publicado(), contem(['titulo', 'subtitulo', 'resumo'])),
+      where: combinar(publicado(), contem),
       limit: 12,
       depth: 0,
       overrideAccess: false,

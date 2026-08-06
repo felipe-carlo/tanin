@@ -5,6 +5,7 @@ import { ganchosDeRevalidacao } from '@/hooks/revalidar'
 import { editorTanin } from '@/fields/editor'
 import { campoFaq, grupoSeo } from '@/fields/seo'
 import { campoSlug } from '@/fields/slug'
+import { campoIndiceBusca, montarIndiceBusca } from '@/fields/busca'
 import {
   campoChipCor,
   campoDataAtualizacao,
@@ -103,6 +104,7 @@ export const Materias: CollectionConfig = {
       ],
     },
     campoSlug('titulo'),
+    campoIndiceBusca,
     {
       name: 'autor',
       type: 'relationship',
@@ -159,6 +161,7 @@ export const Materias: CollectionConfig = {
           data.dataAtualizacao = new Date().toISOString()
         }
         data.tempoLeitura = estimarTempoLeitura(data?.corpo)
+        data.indiceBusca = montarIndiceBusca([data?.titulo, data?.subtitulo, data?.resumo])
         return data
       },
     ],

@@ -20,6 +20,15 @@ import { URL_SITE } from '@/lib/site'
 
 const FORA_DO_MAPA = ['/admin', '/api']
 
+/**
+ * O Payload serve todo arquivo enviado em `/api/midia/file/…`, e é esse endereço que
+ * vai na `og:image`, na `twitter:image` e nas imagens do feed. Sem esta exceção, o
+ * `Disallow: /api` tiraria do índice a foto de toda matéria e faria o cartão de
+ * compartilhamento chegar sem imagem — o robô obedece à regra mais específica, então
+ * ela precisa estar escrita.
+ */
+const LIBERADO = ['/', '/api/midia/']
+
 /** Agentes de IA explicitamente bem-vindos — leitura, busca e treinamento. */
 const ROBOS_DE_IA = [
   'GPTBot',
@@ -46,10 +55,9 @@ const ROBOS_DE_IA = [
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
-      { userAgent: '*', allow: '/', disallow: FORA_DO_MAPA },
-      { userAgent: ROBOS_DE_IA, allow: '/', disallow: FORA_DO_MAPA },
+      { userAgent: '*', allow: LIBERADO, disallow: FORA_DO_MAPA },
+      { userAgent: ROBOS_DE_IA, allow: LIBERADO, disallow: FORA_DO_MAPA },
     ],
     sitemap: `${URL_SITE}/sitemap.xml`,
-    host: URL_SITE,
   }
 }

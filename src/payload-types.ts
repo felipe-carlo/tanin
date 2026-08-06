@@ -242,6 +242,7 @@ export interface Materia {
    * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
    */
   slug?: string | null;
+  indiceBusca?: string | null;
   autor: number | Autor;
   categoria: number | Categoria;
   tags?: (number | Tag)[] | null;
@@ -521,6 +522,7 @@ export interface Vinho {
    * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
    */
   slug?: string | null;
+  indiceBusca?: string | null;
   autor: number | Autor;
   tags?: (number | Tag)[] | null;
   /**
@@ -660,6 +662,7 @@ export interface Guia {
    * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
    */
   slug?: string | null;
+  indiceBusca?: string | null;
   tipoGuia: 'uva' | 'regiao' | 'harmonizacao' | 'servico' | 'compra' | 'tecnico';
   nivel: 'iniciante' | 'intermediario';
   autor: number | Autor;
@@ -1007,6 +1010,7 @@ export interface Edicao {
    * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
    */
   slug?: string | null;
+  indiceBusca?: string | null;
   dataEnvio: string;
   dataPublicacao?: string | null;
   /**
@@ -1429,6 +1433,7 @@ export interface MateriasSelect<T extends boolean = true> {
         canonica?: T;
       };
   slug?: T;
+  indiceBusca?: T;
   autor?: T;
   categoria?: T;
   tags?: T;
@@ -1477,6 +1482,7 @@ export interface EdicoesSelect<T extends boolean = true> {
       };
   numero?: T;
   slug?: T;
+  indiceBusca?: T;
   dataEnvio?: T;
   dataPublicacao?: T;
   chipCor?: T;
@@ -1561,6 +1567,7 @@ export interface VinhosSelect<T extends boolean = true> {
         canonica?: T;
       };
   slug?: T;
+  indiceBusca?: T;
   autor?: T;
   tags?: T;
   dataPublicacao?: T;
@@ -1611,6 +1618,7 @@ export interface GuiasSelect<T extends boolean = true> {
         canonica?: T;
       };
   slug?: T;
+  indiceBusca?: T;
   tipoGuia?: T;
   nivel?: T;
   autor?: T;

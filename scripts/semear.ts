@@ -17,7 +17,11 @@
  *
  * Uso:
  *   pnpm seed              semeia (ou atualiza) tudo
- *   pnpm seed --limpar     apaga o conteúdo semeado antes. Nunca apaga usuários.
+ *   pnpm seed --limpar     ESVAZIA as coleções de conteúdo e taxonomia antes de semear
+ *
+ * `--limpar` não sabe distinguir o que veio deste arquivo do que foi escrito à mão no
+ * painel: ele apaga TODOS os documentos das coleções listadas em `COLECOES_SEMEADAS`.
+ * Serve para banco de desenvolvimento e nada além disso. Usuários e mídia ficam de fora.
  *
  * Produtores, rótulos e importadoras são FICTÍCIOS de propósito. Atribuir nota a um
  * vinho real de um produtor real em dados de demonstração seria publicar uma avaliação
@@ -28,7 +32,25 @@ import { getPayload } from 'payload'
 import type { CollectionSlug, RequiredDataFromCollectionSlug, Where } from 'payload'
 
 import { paraSlug } from '../src/fields/slug'
-import type { Materia } from '../src/payload-types'
+import type { Evento, Guia, Materia, Vinho } from '../src/payload-types'
+
+/**
+ * Os valores fechados das sementes saem dos tipos gerados pelo Payload, e não de
+ * `string`.
+ *
+ * A diferença aparece no dia em que alguém digitar `'purpurea'` no chip de uma matéria:
+ * com `string`, o erro só aparece no meio da execução, como uma falha de validação do
+ * Payload depois de metade do acervo já ter sido escrita. Com a união, o `tsc` recusa
+ * antes de o script chegar perto do banco.
+ */
+type CorDoChip = NonNullable<Materia['chipCor']>
+type CorNaEscala = Vinho['corNaEscala']
+type FaixaDePreco = NonNullable<Vinho['faixaPreco']>
+type TipoDeVinho = Vinho['tipo']
+type CorpoDeVinho = NonNullable<Vinho['corpo']>
+type TipoDeGuia = Guia['tipoGuia']
+type NivelDeGuia = Guia['nivel']
+type TipoDeEvento = Evento['tipo']
 
 /* -------------------------------------------------------------------------- */
 /* Ambiente                                                                    */
@@ -82,7 +104,7 @@ const p = (conteudo: string): No => ({
   children: [textoSimples(conteudo)],
 })
 
-const titulo = (tag: 'h2' | 'h3', conteudo: string): No => ({
+const titulo = (tag: 'h2' | 'h3' | 'h4', conteudo: string): No => ({
   type: 'heading',
   tag,
   format: '',
@@ -93,8 +115,17 @@ const titulo = (tag: 'h2' | 'h3', conteudo: string): No => ({
   children: [textoSimples(conteudo)],
 })
 
+/**
+ * Título de seção do corpo.
+ *
+ * Só há atalho para h2 de propósito. O h1 da página é o título do conteúdo, então a
+ * primeira divisão do texto tem de ser h2: um corpo que abre em h3 faz a página pular
+ * um nível e quebra a navegação por cabeçalho de quem usa leitor de tela. Um h3 legítimo
+ * — subdivisão de uma seção que já existe — se escreve com `titulo('h3', …)`, o que
+ * obriga a pensar duas vezes. Vale lembrar que os blocos `caixa` e `listaNumerada`
+ * também rendem h3, e valem a mesma regra.
+ */
 const h2 = (conteudo: string): No => titulo('h2', conteudo)
-const h3 = (conteudo: string): No => titulo('h3', conteudo)
 
 const blocoCustomizado = (campos: Record<string, unknown>): No => ({
   type: 'block',
@@ -219,7 +250,7 @@ const COLECOES_SEMEADAS: CollectionSlug[] = [
 ]
 
 async function limparConteudo(): Promise<void> {
-  secao('Limpando o conteúdo semeado (usuários ficam intactos)')
+  secao('Esvaziando as coleções de conteúdo (usuários e mídia ficam intactos)')
   for (const colecao of COLECOES_SEMEADAS) {
     const resultado = await payload.delete({
       collection: colecao,
@@ -292,8 +323,26 @@ async function semearUsuario(idDaAutora: number): Promise<void> {
 
   // Usuário existente não é reescrito: trocar a senha de quem já usa o painel a cada
   // execução do seed seria uma surpresa desagradável.
-  if (existentes.docs[0]) {
-    console.log('  = ana@tanin.com.br (já existia, mantido)')
+  //
+  // A ficha de autor é a única exceção, e por um motivo concreto: a chave estrangeira
+  // de `usuarios.autor` é ON DELETE SET NULL, então `--limpar` apaga a autora e zera o
+  // vínculo em silêncio. Sem religar aqui, todo login sobrevive ao seed sem a ficha que
+  // assina o conteúdo — e o campo aparece vazio no painel sem que nada tenha avisado.
+  const existente = existentes.docs[0]
+  if (existente) {
+    const vinculo = existente.autor
+    const idAtual = typeof vinculo === 'object' && vinculo ? vinculo.id : vinculo
+    if (idAtual !== idDaAutora) {
+      await payload.update({
+        collection: 'usuarios',
+        id: existente.id,
+        data: { autor: idDaAutora },
+        depth: 0,
+      })
+      console.log('  = ana@tanin.com.br (mantido; ficha de autor religada)')
+    } else {
+      console.log('  = ana@tanin.com.br (já existia, mantido)')
+    }
     contar('usuarios', 'mantido')
     return
   }
@@ -658,9 +707,9 @@ interface SementeDeGuia {
   titulo: string
   subtitulo: string
   resumo: string
-  tipoGuia: 'uva' | 'regiao' | 'harmonizacao' | 'servico' | 'compra' | 'tecnico'
-  nivel: 'iniciante' | 'intermediario'
-  chipCor: string
+  tipoGuia: TipoDeGuia
+  nivel: NivelDeGuia
+  chipCor: CorDoChip
   tags: string[]
   paraLevar: string[]
   faq: { pergunta: string; resposta: string }[]
@@ -1224,7 +1273,7 @@ async function semearGuias(
         nivel: guia.nivel,
         autor: idDaAutora,
         tags: guia.tags.map((slug) => tags[slug]).filter(Boolean),
-        chipCor: guia.chipCor as never,
+        chipCor: guia.chipCor,
         dataPublicacao: diasAtras(guia.diasAtras),
         dataAtualizacao: diasAtras(Math.max(2, Math.round(guia.diasAtras / 4))),
         _status: 'published',
@@ -1248,10 +1297,10 @@ interface SementeDeVinho {
   regiao?: string
   subRegiao?: string
   safra?: number
-  tipo: 'tinto' | 'branco' | 'rose' | 'espumante' | 'laranja' | 'fortificado'
-  corpoVinho?: 'leve' | 'medio' | 'encorpado'
+  tipo: TipoDeVinho
+  corpoVinho?: CorpoDeVinho
   teorAlcoolico: number
-  corNaEscala: string
+  corNaEscala: CorNaEscala
   uvas: [string, number][]
   nota: number
   veredito: string
@@ -1261,7 +1310,7 @@ interface SementeDeVinho {
   potencialGuarda: string
   tacaRecomendada: string
   decantacao?: string
-  faixaPreco: string
+  faixaPreco: FaixaDePreco
   importadora: string
   tags: string[]
   guias: string[]
@@ -1876,7 +1925,7 @@ async function semearVinhos(
         tipo: vinho.tipo,
         corpo: vinho.corpoVinho ?? null,
         teorAlcoolico: vinho.teorAlcoolico,
-        corNaEscala: vinho.corNaEscala as never,
+        corNaEscala: vinho.corNaEscala,
         uvas: vinho.uvas.map(([slug, percentual]) => ({
           uva: indices.uvas[slug],
           percentual,
@@ -1889,7 +1938,7 @@ async function semearVinhos(
         potencialGuarda: vinho.potencialGuarda,
         tacaRecomendada: vinho.tacaRecomendada,
         decantacao: vinho.decantacao ?? null,
-        faixaPreco: vinho.faixaPreco as never,
+        faixaPreco: vinho.faixaPreco,
         dataPreco: publicacao,
         importadora: indices.importadoras[vinho.importadora],
         guiasRelacionados: vinho.guias.map((slug) => indices.guias[slug]).filter(Boolean),
@@ -1931,7 +1980,7 @@ interface SementeDeMateria {
   resumo: string
   categoria: string
   tags: string[]
-  chipCor: string
+  chipCor: CorDoChip
   diasAtras: number
   destaqueHome?: boolean
   vinhos?: string[]
@@ -2219,11 +2268,11 @@ const MATERIAS: SementeDeMateria[] = [
       p(
         'Marina Bastos monta cartas de vinho em São Paulo desde 2013. Trabalhou em três casas de cozinha contemporânea e hoje presta consultoria para restaurantes que querem reformular o programa de vinho por taça. Ela nos recebeu numa tarde de terça, entre uma prova de amostras e outra.',
       ),
-      h3('Você diz que a carta mudou. Mudou quanto?'),
+      h2('Você diz que a carta mudou. Mudou quanto?'),
       p(
         'Quando comecei, brancos eram algo entre 15% e 20% das taças vendidas num restaurante médio de São Paulo. Hoje, nas casas em que trabalho, ficam entre 40% e 50%. Em restaurante de frutos do mar passa disso. É uma mudança grande para doze anos.',
       ),
-      h3('O que provocou isso?'),
+      h2('O que provocou isso?'),
       p(
         'Três coisas ao mesmo tempo. A primeira é o preço: um branco muito bom custa metade de um tinto muito bom, porque não precisa de barrica nem de anos de estoque. A segunda é o clima — a gente finalmente parou de fingir que mora em Bordeaux. A terceira é a comida brasileira, que tem sal, acidez e pimenta, e isso pede branco.',
       ),
@@ -2231,11 +2280,11 @@ const MATERIAS: SementeDeMateria[] = [
         'A gente finalmente parou de fingir que mora em Bordeaux.',
         'Marina Bastos, sommelière',
       ),
-      h3('Havia resistência a pedir branco?'),
+      h2('Havia resistência a pedir branco?'),
       p(
         'Muita, e nunca foi sobre sabor. Era sobre o que pedir branco significava na mesa. Tinto era o vinho sério, o vinho de quem entende; branco era o que se pedia quando não se queria beber de verdade. Isso é uma construção social e ela demorou uma geração para se desmanchar.',
       ),
-      h3('O que você recomenda para quem quer começar?'),
+      h2('O que você recomenda para quem quer começar?'),
       p(
         'Peço para esquecerem o Chardonnay com madeira, que é o que muita gente experimentou nos anos 1990 e não gostou. Começo com Albariño ou com um Riesling seco. São vinhos de acidez alta, aroma claro e nenhum truque de adega. Em duas taças, a pessoa entende do que a gente estava falando.',
       ),
@@ -2243,7 +2292,7 @@ const MATERIAS: SementeDeMateria[] = [
         'O erro mais comum, segundo ela',
         'Servir branco gelado demais. “Sai da geladeira a 4 °C, e a 4 °C todo vinho branco tem o mesmo gosto: nenhum. Deixe quinze minutos na mesa antes de servir e você vai achar que comprou outra garrafa.”',
       ),
-      h3('E o tinto, perdeu espaço?'),
+      h2('E o tinto, perdeu espaço?'),
       p(
         'Perdeu volume no verão e ganhou qualidade. Quem pede tinto hoje pede com mais critério, quer saber a região, aceita um tinto leve servido fresco. Isso não existia. Há dez anos, tinto gelado era motivo de reclamação na mesa; hoje é o que mais vende de novembro a março.',
       ),
@@ -2548,7 +2597,7 @@ async function semearMaterias(
         autor: idDaAutora,
         categoria: indices.categorias[materia.categoria],
         tags: materia.tags.map((slug) => indices.tags[slug]).filter(Boolean),
-        chipCor: materia.chipCor as never,
+        chipCor: materia.chipCor,
         dataPublicacao: diasAtras(materia.diasAtras, 8),
         destaqueHome: materia.destaqueHome ?? false,
         _status: 'published',
@@ -3264,7 +3313,23 @@ async function semearEdicoes(): Promise<void> {
 /* 7. Agenda                                                                   */
 /* -------------------------------------------------------------------------- */
 
-const EVENTOS = [
+interface SementeDeEvento {
+  slug: string
+  nome: string
+  emDias: number
+  hora: number
+  tipo: TipoDeEvento
+  local?: string
+  cidade: string
+  estado?: string
+  endereco?: string
+  descricao: string
+  preco: string
+  organizador: string
+  chipCor: CorDoChip
+}
+
+const EVENTOS: SementeDeEvento[] = [
   {
     slug: 'brancos-que-envelhecem-sao-paulo',
     nome: 'Brancos que envelhecem: seis rótulos, seis safras',
@@ -3354,7 +3419,7 @@ const EVENTOS = [
     organizador: 'Tanin',
     chipCor: 'ouro',
   },
-] as const
+]
 
 async function semearEventos(): Promise<void> {
   secao('Agenda')
@@ -3367,15 +3432,15 @@ async function semearEventos(): Promise<void> {
         nome: evento.nome,
         slug: evento.slug,
         data: emDias(evento.emDias, evento.hora),
-        local: 'local' in evento ? evento.local : null,
+        local: evento.local ?? null,
         cidade: evento.cidade,
-        estado: 'estado' in evento ? evento.estado : null,
-        endereco: 'endereco' in evento ? evento.endereco : null,
+        estado: evento.estado ?? null,
+        endereco: evento.endereco ?? null,
         tipo: evento.tipo,
         descricao: evento.descricao,
         preco: evento.preco,
         organizador: evento.organizador,
-        chipCor: evento.chipCor as never,
+        chipCor: evento.chipCor,
         _status: 'published',
       },
       `${evento.nome} · ${evento.cidade}`,

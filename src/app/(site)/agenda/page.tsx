@@ -155,7 +155,9 @@ function LinhaDeEvento({ evento }: { evento: Evento }) {
 
         <p className="rotulo mt-2.5 text-grafite">{detalhes}</p>
 
-        <p className="mt-3 max-w-prose text-apoio leading-relaxed text-grafite linhas-2 bonito">
+        {/* Sem corte de linhas: o evento não tem página própria, então o que for
+            aparado aqui o leitor não tem onde ir buscar. */}
+        <p className="mt-3 max-w-prose text-apoio leading-relaxed text-grafite bonito">
           {evento.descricao}
         </p>
 

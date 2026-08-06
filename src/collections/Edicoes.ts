@@ -5,6 +5,7 @@ import { ganchosDeRevalidacao } from '@/hooks/revalidar'
 import { editorTanin } from '@/fields/editor'
 import { grupoSeo } from '@/fields/seo'
 import { campoSlug } from '@/fields/slug'
+import { campoIndiceBusca, montarIndiceBusca } from '@/fields/busca'
 import { campoChipCor, campoResumo, grupoImagemDestaque } from '@/fields/comuns'
 import { ESCALA_CROMATICA } from '@/lib/escala-cores'
 
@@ -116,6 +117,7 @@ export const Edicoes: CollectionConfig = {
       },
     },
     campoSlug('titulo'),
+    campoIndiceBusca,
     {
       name: 'dataEnvio',
       type: 'date',
@@ -165,6 +167,12 @@ export const Edicoes: CollectionConfig = {
           data.chipCor = ESCALA_CROMATICA[indice].id
         }
         if (operation === 'create' && !data.dataPublicacao) data.dataPublicacao = data.dataEnvio
+        data.indiceBusca = montarIndiceBusca([
+          data?.titulo,
+          data?.subtitulo,
+          data?.resumo,
+          data?.numero ? `edicao ${data.numero}` : null,
+        ])
         return data
       },
     ],

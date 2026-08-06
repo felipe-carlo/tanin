@@ -141,12 +141,26 @@ const noLista = (ordenada: boolean, itens: NoLexical[]): NoLexical => ({
 })
 
 /**
+ * Endereço em forma que o campo de link do editor aceite.
+ *
+ * O Payload recusa endereço com espaço — e, no que ele não reconhece, reescreve o
+ * endereço inteiro codificado, transformando um link bom em lixo. Espaço em branco
+ * vindo de HTML quebrado é a causa mais comum, e sai daqui antes de virar problema
+ * na hora de publicar.
+ */
+const enderecoDeLink = (endereco: string): string =>
+  endereco
+    .replace(/[\t\n\r\f]+/g, '')
+    .trim()
+    .replace(/ /g, '%20')
+
+/**
  * Link externo. `newTab` fica ligado porque tudo que vem do beehiiv aponta para
  * fora do portal, e `seguir: false` é o padrão do campo extra do editor.
  */
 const noLink = (endereco: string, filhos: NoLexical[]): NoLexical => ({
   type: 'link',
-  fields: { linkType: 'custom', url: endereco, newTab: true, seguir: false },
+  fields: { linkType: 'custom', url: enderecoDeLink(endereco), newTab: true, seguir: false },
   children: filhos,
   direction: 'ltr',
   format: '',
@@ -223,6 +237,36 @@ const TAGS_EM_LINHA = new Set([
   'u',
 ])
 
+/**
+ * Tags que, ao abrir, encerram um `<p>` esquecido aberto — é o que o navegador faz,
+ * porque parágrafo só carrega texto. Sem isso, um `<h2>` depois de um `<p>` sem
+ * fechamento viraria texto corrido: o título some e a âncora do índice vai junto.
+ */
+const TAGS_QUE_FECHAM_PARAGRAFO = new Set([
+  'address',
+  'blockquote',
+  'div',
+  'dl',
+  'fieldset',
+  'form',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'header',
+  'hr',
+  'li',
+  'main',
+  'ol',
+  'p',
+  'pre',
+  'section',
+  'table',
+  'ul',
+])
+
 /** Caixas que só agrupam: entramos nelas e seguimos procurando blocos. */
 const TAGS_TRANSPARENTES = new Set([
   'article',
@@ -284,13 +328,20 @@ const ENTIDADES: Record<string, string> = {
   Oacute: 'Ó',
 }
 
+/** O maior caractere que existe em Unicode. Acima disso `fromCodePoint` estoura. */
+const MAIOR_CODIGO_UNICODE = 0x10ffff
+
 const decodificarEntidades = (texto: string): string =>
   texto.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g, (inteira, corpo: string) => {
     if (corpo.startsWith('#')) {
       const codigo = corpo[1] === 'x' || corpo[1] === 'X'
         ? Number.parseInt(corpo.slice(2), 16)
         : Number.parseInt(corpo.slice(1), 10)
-      return Number.isFinite(codigo) && codigo > 0 ? String.fromCodePoint(codigo) : inteira
+      // Fora da faixa, a entidade fica como está: um "&#999999999;" perdido no meio de
+      // uma carta não pode derrubar a importação inteira.
+      return Number.isInteger(codigo) && codigo > 0 && codigo <= MAIOR_CODIGO_UNICODE
+        ? String.fromCodePoint(codigo)
+        : inteira
     }
     return ENTIDADES[corpo] ?? inteira
   })
@@ -354,6 +405,21 @@ function analisarHtml(html: string): NoHtml[] {
     }
   }
 
+  /**
+   * Fecha uma tag que ficou aberta logo acima, atravessando só marcação em linha.
+   * Um bloco no meio do caminho significa que a tag de cima é de outro contexto —
+   * uma lista dentro de um item, por exemplo — e deve continuar aberta.
+   */
+  const fecharPendente = (tag: string) => {
+    for (let indice = pilha.length - 1; indice > 0; indice -= 1) {
+      if (pilha[indice].tag === tag) {
+        fechar(tag)
+        return
+      }
+      if (!TAGS_EM_LINHA.has(pilha[indice].tag)) return
+    }
+  }
+
   const padrao = /<\/([a-zA-Z][a-zA-Z0-9-]*)\s*>|<([a-zA-Z][a-zA-Z0-9-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)>/g
   let cursor = 0
   let achado: RegExpExecArray | null
@@ -370,19 +436,10 @@ function analisarHtml(html: string): NoHtml[] {
     }
 
     const tag = tagAberta.toLowerCase()
-    // Parágrafo dentro de parágrafo e item dentro de item não existem: quem estava
-    // aberto fecha aqui. É o caso mais comum de HTML de newsletter mal fechado.
-    if (tag === 'p' || tag === 'li') {
-      for (let indice = pilha.length - 1; indice > 0; indice -= 1) {
-        if (pilha[indice].tag === tag) {
-          fechar(tag)
-          break
-        }
-        // Um bloco no meio do caminho significa que o `p`/`li` de cima é de outro
-        // contexto (uma lista dentro de um item, por exemplo) e deve continuar aberto.
-        if (!TAGS_EM_LINHA.has(pilha[indice].tag)) break
-      }
-    }
+    // Parágrafo dentro de bloco e item dentro de item não existem: quem estava aberto
+    // fecha aqui. É o caso mais comum de HTML de newsletter mal fechado.
+    if (TAGS_QUE_FECHAM_PARAGRAFO.has(tag)) fecharPendente('p')
+    if (tag === 'li') fecharPendente('li')
 
     const elemento: ElementoHtml = {
       tipo: 'elemento',
@@ -668,14 +725,26 @@ export function converterHtmlEmLexical(
 /* Leitura do que foi convertido                                               */
 /* -------------------------------------------------------------------------- */
 
+/** Nós que fecham um bloco: o texto do próximo nunca pode encostar no anterior. */
+const BLOCOS_DE_TEXTO = new Set([
+  'paragraph',
+  'heading',
+  'quote',
+  'list',
+  'listitem',
+  'horizontalrule',
+])
+
 /** Texto puro de uma árvore de nós — usado para resumo e para as âncoras. */
 export function textoDe(nos: NoLexical[]): string {
   return nos
     .map((no) => {
       if (no.type === 'text') return String(no.text ?? '')
       if (no.type === 'linebreak') return ' '
-      if (Array.isArray(no.children)) return textoDe(no.children as NoLexical[])
-      return ''
+      const dentro = Array.isArray(no.children) ? textoDe(no.children as NoLexical[]) : ''
+      // Sem o espaço, o fim de um bloco gruda no começo do seguinte e o resumo
+      // automático sai com palavras emendadas.
+      return BLOCOS_DE_TEXTO.has(no.type) ? `${dentro} ` : dentro
     })
     .join('')
     .replace(/\s+/g, ' ')
@@ -755,9 +824,16 @@ async function baixarPosts(): Promise<PostBeehiiv[]> {
     if (pagina >= totalDePaginas || lote.length === 0) break
   }
 
-  return posts
-    .filter((post) => typeof post.publish_date === 'number')
-    .sort((a, b) => (a.publish_date ?? 0) - (b.publish_date ?? 0))
+  // Sem data não há como numerar: a ordem do arquivo é a ordem de envio.
+  const comData = posts.filter((post) => typeof post.publish_date === 'number')
+  if (comData.length < posts.length) {
+    console.log(
+      `  · ${posts.length - comData.length} edição(ões) sem data de envio ficaram de fora — ` +
+        'essas precisam entrar à mão pelo painel',
+    )
+  }
+
+  return comData.sort((a, b) => (a.publish_date ?? 0) - (b.publish_date ?? 0))
 }
 
 /** O HTML da edição. A listagem costuma trazer junto; quando não traz, buscamos. */
@@ -786,12 +862,24 @@ interface DadosDaEdicao {
   _status: 'draft' | 'published'
 }
 
+/**
+ * O que o banco já tem para esta edição.
+ *
+ * `conflito` é o caso que interessa: o número está ocupado por uma edição que não
+ * veio desta importação — escrita à mão, semeada ou de outra publicação. Sobrescrever
+ * calado seria destruir trabalho alheio, então ela é pulada e o motivo aparece no fim.
+ */
+type Correspondencia =
+  | { tipo: 'nova' }
+  | { tipo: 'importada'; edicao: Edicao }
+  | { tipo: 'conflito'; edicao: Edicao }
+
 /** Procura a edição já importada: primeiro pelo endereço no beehiiv, depois pelo número. */
-async function edicaoExistente(
+async function procurarEdicao(
   payload: Payload,
   urlBeehiiv: string | undefined,
   numero: number,
-): Promise<Edicao | null> {
+): Promise<Correspondencia> {
   const resultado = await payload.find({
     collection: 'edicoes',
     where: {
@@ -804,8 +892,21 @@ async function edicaoExistente(
     depth: 0,
   })
 
-  if (resultado.docs.length === 0) return null
-  return resultado.docs.find((doc) => urlBeehiiv && doc.urlBeehiiv === urlBeehiiv) ?? resultado.docs[0]
+  const peloEndereco = resultado.docs.find(
+    (doc) => Boolean(urlBeehiiv) && doc.urlBeehiiv === urlBeehiiv,
+  )
+  if (peloEndereco) return { tipo: 'importada', edicao: peloEndereco }
+
+  const peloNumero = resultado.docs.find((doc) => doc.numero === numero)
+  if (!peloNumero) return { tipo: 'nova' }
+
+  // Sem endereço gravado mas com data de importação: foi este script que a criou,
+  // numa rodada em que o beehiiv não devolveu o endereço da edição. É seguro atualizar.
+  if (peloNumero.importadaEm && !peloNumero.urlBeehiiv) {
+    return { tipo: 'importada', edicao: peloNumero }
+  }
+
+  return { tipo: 'conflito', edicao: peloNumero }
 }
 
 /** Slug livre. Duas edições com o mesmo título acontecem — o número desempata. */
@@ -951,6 +1052,8 @@ async function principal(): Promise<number> {
     if (nos.length === 0 || !temTexto(nos)) {
       puladas += 1
       avisos.push(`${rotulo} "${post.title}" — sem corpo convertível; importe essa à mão.`)
+      // Os avisos da conversão explicam o vazio: quase sempre a carta inteira era tabela.
+      for (const aviso of avisosDaEdicao) avisos.push(`${rotulo}: ${aviso}`)
       console.log(`  ${rotulo} · pulada (corpo vazio) · ${post.title}`)
       continue
     }
@@ -967,7 +1070,21 @@ async function principal(): Promise<number> {
     const dataEnvio = new Date((post.publish_date ?? 0) * 1000).toISOString()
     const urlBeehiiv = post.web_url?.trim() || undefined
 
-    const existente = await edicaoExistente(payload, urlBeehiiv, numero)
+    const correspondencia = await procurarEdicao(payload, urlBeehiiv, numero)
+
+    if (correspondencia.tipo === 'conflito') {
+      const ocupada = correspondencia.edicao
+      puladas += 1
+      avisos.push(
+        `${rotulo} "${titulo}" — o número ${numero} já é da edição "${ocupada.titulo}" ` +
+          `(/boletim/${ocupada.slug}), que não veio do beehiiv. Nada foi alterado. ` +
+          'Renumere ou apague a edição existente no painel e rode de novo.',
+      )
+      console.log(`  ${rotulo} · pulada (número já ocupado) · ${ocupada.slug}`)
+      continue
+    }
+
+    const existente = correspondencia.tipo === 'importada' ? correspondencia.edicao : null
     const slug = await slugLivre(
       payload,
       paraSlug(titulo) || `edicao-${numero}`,

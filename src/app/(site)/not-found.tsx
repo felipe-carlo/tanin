@@ -1,12 +1,23 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 
 import { CampoDeBusca } from '@/components/CampoDeBusca'
 import { LinhaMateria } from '@/components/CartaoMateria'
 import { listarMaterias } from '@/lib/consultas'
 import type { Materia } from '@/payload-types'
 
-// Sem `metadata` aqui de propósito: o Next 16 só reconhece o export em
-// `global-not-found`, e já injeta `noindex` sozinho em tudo que responde 404.
+/**
+ * Sem este bloco, o 404 herda do layout raiz `canonical: '/'` e `index, follow` — ou
+ * seja, sai dizendo ao buscador que esta página é a capa e que vale indexá-la, bem ao
+ * lado do `noindex` que o Next injeta na resposta 404. Sinal contraditório apontando
+ * para a página mais importante do portal: `alternates: null` apaga a canônica e o
+ * `robots` daqui substitui o do layout.
+ */
+export const metadata: Metadata = {
+  title: 'Página não encontrada',
+  alternates: null,
+  robots: { index: false, follow: true },
+}
 
 const CAMINHOS = [
   { rotulo: 'Página inicial', endereco: '/', nota: 'A capa de hoje' },

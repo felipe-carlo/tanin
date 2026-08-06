@@ -44,21 +44,23 @@ const lerTermo = (parametros: ParametrosDeBusca): string =>
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const termo = lerTermo(await searchParams)
-  const canonica = `${URL_SITE}/busca`
 
   if (!termo) {
+    // Sem `robots` aqui de propósito: a capa da busca herda do layout o `index, follow`
+    // com `max-snippet` e `max-image-preview` que o resto do portal usa.
     return {
       title: 'Busca',
       description: DESCRICAO,
-      alternates: { canonical: canonica },
-      robots: { index: true, follow: true },
+      alternates: { canonical: `${URL_SITE}/busca` },
     }
   }
 
   return {
     title: `Busca por “${termo}”`,
     description: `O que a Tanin já publicou sobre “${termo}”.`,
-    alternates: { canonical: canonica },
+    // A canônica é a própria consulta, não `/busca`: mandar um `noindex` apontar para
+    // uma página que a gente quer indexada é o jeito conhecido de derrubar as duas.
+    alternates: { canonical: `${URL_SITE}/busca?q=${encodeURIComponent(termo)}` },
     // A página de resultado não disputa o índice com o conteúdo que ela lista —
     // quem procura no Google tem que cair na matéria, nunca na busca do site.
     robots: { index: false, follow: true },

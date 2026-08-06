@@ -5,6 +5,7 @@ import { ganchosDeRevalidacao } from '@/hooks/revalidar'
 import { editorTanin } from '@/fields/editor'
 import { campoFaq, grupoSeo } from '@/fields/seo'
 import { campoSlug } from '@/fields/slug'
+import { campoIndiceBusca, montarIndiceBusca } from '@/fields/busca'
 import {
   campoChipCor,
   campoDataAtualizacao,
@@ -99,6 +100,7 @@ export const Guias: CollectionConfig = {
       ],
     },
     campoSlug('titulo'),
+    campoIndiceBusca,
     {
       name: 'tipoGuia',
       type: 'select',
@@ -146,6 +148,7 @@ export const Guias: CollectionConfig = {
         if (operation === 'update' && originalDoc?._status === 'published') {
           data.dataAtualizacao = new Date().toISOString()
         }
+        data.indiceBusca = montarIndiceBusca([data?.titulo, data?.subtitulo, data?.resumo])
         return data
       },
     ],

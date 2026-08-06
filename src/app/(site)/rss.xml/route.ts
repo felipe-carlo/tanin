@@ -34,8 +34,13 @@ const escapar = (texto: string): string =>
 const cdata = (texto: string): string => `<![CDATA[${texto.replace(/]]>/g, ']]]]><![CDATA[>')}]]>`
 
 /** Data no formato exigido pelo RSS 2.0 (RFC 822). */
-const rfc822 = (valor?: string | null): string =>
-  new Date(valor ?? Date.now()).toUTCString().replace('GMT', '+0000')
+const rfc822 = (valor?: string | null): string => {
+  const data = new Date(valor ?? Date.now())
+  // Uma data inválida viraria <pubDate>Invalid Date</pubDate>, que quebra o feed
+  // inteiro em leitores estritos. Melhor cair no agora do que derrubar tudo.
+  const valida = Number.isNaN(data.getTime()) ? new Date() : data
+  return valida.toUTCString().replace('GMT', '+0000')
+}
 
 /* -------------------------------------------------------------------------- */
 /* Lexical → HTML                                                              */
@@ -119,6 +124,14 @@ const conversores: HTMLConvertersFunction = ({ defaultConverters }) => ({
   },
 })
 
+/**
+ * Rede de segurança para o que escapou dos conversores: um link digitado à mão como
+ * `/guias/algo` sai do editor relativo e, dentro de um leitor de feed, resolveria
+ * contra o domínio do leitor. Aqui todo caminho de raiz vira endereço completo.
+ */
+const absolutizar = (html: string): string =>
+  html.replace(/(href|src)="\/(?!\/)/g, `$1="${URL_SITE}/`)
+
 /** Converte o corpo em HTML; se o documento estiver malformado, cai no resumo. */
 const corpoEmHtml = (corpo: unknown, resumo: string): string => {
   try {
@@ -127,7 +140,7 @@ const corpoEmHtml = (corpo: unknown, resumo: string): string => {
       converters: conversores,
       disableContainer: true,
     })
-    return html.trim() || `<p>${escapar(resumo)}</p>`
+    return absolutizar(html.trim()) || `<p>${escapar(resumo)}</p>`
   } catch {
     // Um documento quebrado tira o texto integral daquele item, não o feed inteiro do ar.
     return `<p>${escapar(resumo)}</p>`
