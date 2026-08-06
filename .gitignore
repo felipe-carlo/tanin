@@ -8,9 +8,11 @@ out
 next-env.d.ts
 
 # ambiente
-.env
-.env.local
-.env*.local
+# Regra ampla de propósito: qualquer .env fica de fora, e só o exemplo (que tem
+# marcadores, nunca segredo de verdade) é liberado. Listar variantes uma a uma é
+# como segredo vaza — basta alguém criar um .env.producao que ninguém previu.
+.env*
+!.env.example
 
 # payload
 /media

@@ -193,20 +193,34 @@ WhatsApp, e o buscador consegue percorrer o acervo inteiro.
 
 ## O que precisa de você
 
-### 🔴 1. Senha do banco no Supabase — bloqueia o deploy
+### 🔴 1. Colar as variáveis na Vercel — e trocar a senha do banco depois
 
-O portal fala com o Postgres do Supabase direto, e para isso precisa da senha do banco,
-que só aparece para você.
+A senha do banco está no `.env` local, que **nunca vai para o Git** (o `.gitignore` agora
+ignora qualquer `.env*`, e libera só o `.env.example`, que tem marcadores). Nenhum segredo
+está versionado — conferido.
 
-**Onde pegar:** Supabase → seu projeto → *Project Settings* → *Database* →
-*Connection string* → aba **URI**. Copie a linha inteira e troque `[YOUR-PASSWORD]` pela
-senha do banco.
+**Na Vercel:** *Settings* → *Environment Variables*. É lá que a senha deve morar em
+produção: fica criptografada, é injetada só na hora do build e da execução, e não passa
+por nenhum arquivo. Cole estas:
 
-Depois coloque em `DATABASE_URI`, tanto no `.env` local quanto nas variáveis de ambiente
-da Vercel. Use a porta **6543** (*Transaction pooler*) na Vercel e ligue `DATABASE_SSL=true`.
+| Variável | Valor |
+| --- | --- |
+| `DATABASE_URI` | a *Connection string* do Supabase, **Transaction pooler**, porta 6543 |
+| `DATABASE_SSL` | `true` |
+| `PAYLOAD_SECRET` | um texto longo e aleatório — gere um novo, não reaproveite o local |
+| `NEXT_PUBLIC_URL_SITE` | o endereço final do portal, sem barra no fim |
 
-O projeto que você me passou (`ekdglgmbyhnngippohvh`) já está registrado em
-`.env.example` e em `NEXT_PUBLIC_SUPABASE_URL`; falta só a senha.
+> **Copie o `DATABASE_URI` do painel do Supabase, não do `.env`.** O host do pooler tem a
+> região no nome (`aws-0-us-east-1…`), e eu não consegui confirmar a sua daqui: este
+> ambiente só tem saída HTTPS, e Postgres fala outro protocolo em outra porta. Tentei
+> conectar e não passou — então o que está no `.env` é a melhor suposição, não uma
+> verificação. Em *Project Settings* → *Database* → *Connection string* → **URI** vem o
+> host certo.
+
+**Recomendo trocar a senha do banco depois de configurar.** Ela passou por uma conversa
+de chat, o que significa que ficou registrada em pelo menos um lugar além do cofre do
+Supabase. Trocar leva um minuto (*Database* → *Reset database password*) e é a diferença
+entre uma senha que só o cofre conhece e uma que já circulou.
 
 ### 🔴 2. Onde as imagens vão morar em produção
 
