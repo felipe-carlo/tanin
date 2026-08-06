@@ -111,8 +111,10 @@ export default async function PaginaDaMateria({ params }: Props) {
     { nome: materia.titulo, endereco: `/materias/${materia.slug}` },
   ]
 
-  // A capitular só entra em texto longo. Em nota curta, vira enfeite.
-  const textoLongo = (materia.tempoLeitura ?? 0) >= 4
+  // A capitular só entra em texto longo — três minutos são cerca de 600 palavras.
+  // Em nota curta ela vira enfeite, que é a primeira coisa a fazer um projeto
+  // editorial parecer template.
+  const textoLongo = (materia.tempoLeitura ?? 0) >= 3
 
   return (
     <>

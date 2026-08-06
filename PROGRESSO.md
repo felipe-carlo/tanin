@@ -129,6 +129,28 @@ trocar.
 - HTML semântico: um `h1` por página, `<time datetime>`, `<figure>`/`<figcaption>`,
   `nav` com rótulo. Alvos de toque de 44px. Foco visível em tudo.
 - Imagens por `next/image` com `sizes` declarado; fontes com `display: swap`.
+- Revalidação sob demanda: publicar no painel refaz só as páginas afetadas, em vez de
+  esperar o cache expirar. Na prática, a Ana salva e vê no ar.
+
+### O que foi medido, não só afirmado
+
+| Verificação | Resultado |
+| --- | --- |
+| Build de produção | passa; **73 páginas** geradas de antemão |
+| Tipos (`tsc --noEmit`) | limpo |
+| Acessibilidade (axe, WCAG 2.1 AA + boas práticas) | **zero violações em 14 páginas** |
+| Um `h1` por página | confere nas 14 |
+| JSON-LD | válido e completo em todos os tipos de página |
+| Tempo de resposta das páginas prontas | 3 a 8 ms |
+| Busca com e sem acento | "regiao" e "região" devolvem o mesmo |
+| Filtros de vinho | tipo, cor, país, uva, preço e ordenação, todos conferidos |
+
+Duas coisas foram corrigidas depois de medidas, e vale registrar porque não seriam
+percebidas a olho: **Âmbar e Laranja tinham a cor de texto invertida** na escala
+cromática (contraste de 3,3 e 3,7 contra o mínimo de 4,5 — agora as quatorze faixas têm
+a cor escolhida por cálculo), e o `robots.txt` **bloqueava `/api`, que é justamente o
+endereço das imagens** enviadas pelo painel — o portal inteiro ficaria sem imagem de
+compartilhamento no WhatsApp e fora do Google Imagens.
 
 ---
 
