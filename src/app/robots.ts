@@ -12,6 +12,10 @@ import { URL_SITE } from '@/lib/site'
  *
  * Fora do mapa ficam só duas coisas: o painel, que é privado, e a API, que serve dados
  * crus que já existem em HTML nas páginas.
+ *
+ * Este arquivo mora na raiz de `app/`, e não em `app/(site)/`, porque o Next só
+ * reconhece `robots` quando ele está na raiz — ao contrário de `sitemap`, que vale em
+ * qualquer segmento. Dentro do grupo de rotas, o endereço /robots.txt devolve 404.
  */
 
 const FORA_DO_MAPA = ['/admin', '/api']

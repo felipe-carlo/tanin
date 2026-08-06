@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { autenticado, lerPublicados, somenteAdministrador } from '@/lib/acesso'
+import { ganchosDeRevalidacao } from '@/hooks/revalidar'
 import { editorTanin } from '@/fields/editor'
 import { campoFaq, grupoSeo } from '@/fields/seo'
 import { campoSlug } from '@/fields/slug'
@@ -148,5 +149,6 @@ export const Guias: CollectionConfig = {
         return data
       },
     ],
+    ...ganchosDeRevalidacao('/guias'),
   },
 }

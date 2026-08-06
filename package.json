@@ -10,7 +10,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:vercel": "payload migrate && next build",
     "start": "next start",
+    "migrate": "payload migrate",
+    "migrate:criar": "payload migrate:create",
+    "migrate:status": "payload migrate:status",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "generate:types": "payload generate:types",

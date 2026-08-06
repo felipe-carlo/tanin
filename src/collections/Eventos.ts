@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { autenticado, lerPublicadosSemData, somenteAdministrador } from '@/lib/acesso'
+import { ganchosDeRevalidacao } from '@/hooks/revalidar'
 import { campoSlug } from '@/fields/slug'
 import { grupoSeo } from '@/fields/seo'
 import { campoChipCor, grupoImagemDestaque } from '@/fields/comuns'
@@ -89,4 +90,5 @@ export const Eventos: CollectionConfig = {
     campoChipCor,
     grupoSeo,
   ],
+  hooks: ganchosDeRevalidacao('/agenda'),
 }

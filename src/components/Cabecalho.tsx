@@ -6,11 +6,14 @@ import { MENU_PADRAO, obterConfiguracoes } from '@/lib/site'
 
 export async function Cabecalho() {
   const config = await obterConfiguracoes()
-  const itens =
-    config.menu?.filter((item) => item.rotulo && item.endereco).map((item) => ({
-      rotulo: item.rotulo!,
-      endereco: item.endereco!,
-    })) ?? MENU_PADRAO
+
+  // O menu do painel vence quando existe. Um array vazio (que é como o Payload devolve
+  // um global recém-criado) não é uma escolha da Ana — é ausência de escolha, e por isso
+  // cai no padrão em vez de deixar o cabeçalho sem navegação.
+  const doPainel = (config.menu ?? [])
+    .filter((item) => item.rotulo && item.endereco)
+    .map((item) => ({ rotulo: item.rotulo!, endereco: item.endereco! }))
+  const itens = doPainel.length > 0 ? doPainel : MENU_PADRAO
 
   return (
     <header className="sticky top-0 z-50 border-b border-fio bg-papel/92 backdrop-blur-sm sem-impressao">

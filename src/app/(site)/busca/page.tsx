@@ -148,7 +148,11 @@ export default async function PaginaDeBusca({ searchParams }: Props) {
 /* -------------------------------------------------------------------------- */
 
 async function BuscaEmBranco() {
+  // As sugestões são um enfeite útil, não o assunto da página: se o banco não
+  // responder, a busca continua funcionando com os termos fixos abaixo.
   const guias = await listarGuias({ limite: 6 })
+    .then((lista) => lista.docs)
+    .catch(() => [])
 
   return (
     <div className="caixa pb-24 pt-8 md:pt-10">
@@ -178,12 +182,12 @@ async function BuscaEmBranco() {
 
         <section className="col-span-6 lg:col-span-6 lg:col-start-7">
           <h2 className="rotulo text-grafite">
-            {guias.docs.length > 0 ? 'Começar por um guia' : 'Buscas para começar'}
+            {guias.length > 0 ? 'Começar por um guia' : 'Buscas para começar'}
           </h2>
 
-          {guias.docs.length > 0 ? (
+          {guias.length > 0 ? (
             <ul className="mt-2">
-              {guias.docs.map((guia) => (
+              {guias.map((guia) => (
                 <li key={guia.id} className="border-b border-fio">
                   <Link
                     href={`/guias/${guia.slug}`}

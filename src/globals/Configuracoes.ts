@@ -1,6 +1,7 @@
 import type { GlobalConfig } from 'payload'
 
 import { autenticado } from '@/lib/acesso'
+import { revalidarSiteInteiro } from '@/hooks/revalidar'
 
 export const Configuracoes: GlobalConfig = {
   slug: 'configuracoes',
@@ -12,6 +13,7 @@ export const Configuracoes: GlobalConfig = {
     description: 'Textos e ligações que aparecem em todas as páginas.',
   },
   access: { read: () => true, update: autenticado },
+  hooks: { afterChange: [revalidarSiteInteiro] },
   fields: [
     {
       type: 'tabs',

@@ -22,21 +22,26 @@ export function EscalaDoVinho({
 
   return (
     <div className={className}>
-      <ol className="flex h-14 w-full border border-tinta md:h-16">
+      {/* A régua guarda a cor cheia em todas as faixas: apagar as outras faria a escala
+          parecer quebrada e tiraria justamente o que ela ensina. O que marca a faixa do
+          vinho é altura, moldura e a seta — recursos de forma, não de cor. */}
+      <ol className="flex h-14 w-full items-end md:h-16">
         {ESCALA_CROMATICA.map((faixa) => {
           const marcada = faixa.id === atual.id
           const conteudo = (
             <span
-              className="relative flex h-full w-full items-end justify-center pb-1.5 transition-[filter] duration-300"
+              className="relative flex w-full items-end justify-center pb-1 transition-[height] duration-300"
               style={{
                 backgroundColor: faixa.hex,
-                filter: marcada ? 'none' : 'saturate(0.35) opacity(0.5)',
+                height: marcada ? '100%' : '72%',
+                outline: marcada ? '1px solid var(--color-tinta)' : 'none',
+                outlineOffset: marcada ? '0' : undefined,
               }}
             >
               {marcada && (
                 <span
                   aria-hidden="true"
-                  className="font-[family-name:var(--font-rotulo)] text-[0.625rem] font-semibold tracking-[0.1em]"
+                  className="text-[0.5rem] leading-none"
                   style={{ color: faixa.contraste }}
                 >
                   ▲
@@ -48,13 +53,13 @@ export function EscalaDoVinho({
           return (
             <li
               key={faixa.id}
-              className="min-w-0 flex-1 border-r border-papel/30 last:border-r-0"
+              className="flex h-full min-w-0 flex-1 items-end border-r border-papel last:border-r-0"
               aria-current={marcada ? 'true' : undefined}
             >
               {comLinks ? (
                 <Link
                   href={`/vinhos?cor=${faixa.id}`}
-                  className="block h-full w-full"
+                  className="flex h-full w-full items-end"
                   title={`${faixa.nome} — ${faixa.descricao}`}
                 >
                   <span className="apenas-leitor">
@@ -64,7 +69,7 @@ export function EscalaDoVinho({
                   {conteudo}
                 </Link>
               ) : (
-                <span className="block h-full w-full" title={faixa.nome}>
+                <span className="flex h-full w-full items-end" title={faixa.nome}>
                   {conteudo}
                 </span>
               )}
@@ -72,6 +77,7 @@ export function EscalaDoVinho({
           )
         })}
       </ol>
+      <div className="h-px w-full bg-tinta" aria-hidden="true" />
 
       <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <p className="rotulo">

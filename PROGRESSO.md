@@ -1,0 +1,247 @@
+# PROGRESSO — Portal Tanin
+
+Documento de acompanhamento. Cada fase registra **o que foi feito**, **o que ficou
+pendente** e **o que precisa de decisão sua**.
+
+Última atualização: fases 1 a 6 concluídas.
+
+---
+
+## Como rodar o projeto
+
+```bash
+pnpm install          # instala tudo
+pnpm dev              # sobe o site em http://localhost:3000
+                      # e o painel em http://localhost:3000/admin
+pnpm seed             # popula o banco com conteúdo de exemplo
+pnpm build            # gera a versão de produção
+```
+
+O arquivo `.env.example` explica cada variável de ambiente, uma por uma, em português.
+Copie para `.env` e preencha antes do primeiro `pnpm dev`.
+
+**Acesso do painel no conteúdo de exemplo:** `ana@tanin.com.br` / `tanin2026`.
+Troque a senha assim que entrar.
+
+---
+
+## Fase 1 — Fundação ✅
+
+**Feito**
+
+- Next.js 16 (App Router, TypeScript) com **Payload CMS 3** rodando dentro do mesmo
+  aplicativo. Um repositório, um deploy, um banco.
+- Banco **Postgres**. Em desenvolvimento roda localmente; em produção aponta para o
+  Supabase pela variável `DATABASE_URI`.
+- Painel em `/admin`, **todo em português**, com o vinho da marca como cor de ação.
+- Modelo de dados completo: Matérias, Edições do Boletim, Vinhos, Guias, Eventos,
+  Autores, Categorias, Tags, Uvas, Regiões, Importadoras, Mídia, Inscrições e Usuários.
+- Rascunho, **agendamento de publicação** e **pré-visualização ao vivo** ligados nas
+  coleções publicáveis. A Ana escreve, agenda para quinta e o site publica sozinho.
+- Migração inicial gerada em `src/migrations/`. Em produção o banco muda por migração,
+  nunca automaticamente — é o que impede um deploy de alterar a estrutura por engano.
+
+**Por que Payload, e não Sanity** — como você propôs, e mantido: roda no mesmo projeto
+Next.js, usa Postgres comum (nada de linguagem de consulta nova), o painel já vem
+traduzido e não cobra por usuário. Nenhum argumento apareceu no caminho que justificasse
+trocar.
+
+---
+
+## Fase 2 — Sistema de design ✅
+
+**Feito**
+
+- Paleta de cinco cores: tinta, papel, borra, grafite e fio. Sem sombra em lugar nenhum —
+  o que separa blocos é **fio de 1px**, como em impresso.
+- Tipografia via `next/font`, sem requisição a servidor de terceiros:
+  **Fraunces** nos títulos (com os eixos SOFT e WONK), **Newsreader** no texto longo,
+  **Archivo** em caixa alta nos rótulos.
+- **A escala cromática do vinho** — 14 faixas nomeadas em português, de Verde-palha a
+  Tawny, definidas num arquivo só (`src/lib/escala-cores.ts`) e usadas em três lugares:
+  o seletor do painel, as variáveis de CSS e os componentes.
+- Grade editorial de 12 colunas com composições assimétricas, capitular nos textos
+  longos, número de edição como elemento gráfico e uma entrada escalonada por página.
+- **Página de amostra em `/estilo`** — a régua tipográfica, a paleta, a escala e os
+  componentes, todos em um lugar. É onde se aprova o visual sem abrir código.
+
+---
+
+## Fase 3 — Matérias e Boletim ✅
+
+**Feito**
+
+- `/materias` com filtro por categoria em links de verdade (cada recorte tem endereço
+  próprio) e paginação rastreável.
+- `/materias/[slug]`: abertura assimétrica, capitular, trilho lateral com vinhos citados
+  e guias, FAQ, bloco de autoria, "leia também" e convite ao boletim.
+- `/boletim`: o hub, com **a fita cromática** — cada edição é uma faixa de cor, a fita
+  cresce toda semana e cada faixa leva à edição.
+- `/boletim/[slug]`: número da edição em corpo de cartaz, índice de blocos com âncora
+  (dá para mandar alguém direto para um trecho) e navegação entre edições vizinhas.
+- Formulário de inscrição **nativo do site**, não o iframe do beehiiv. Funciona mesmo
+  sem JavaScript e guarda a inscrição no painel caso o beehiiv esteja fora do ar.
+- Script de importação das edições antigas do beehiiv (`pnpm importar:beehiiv`),
+  documentado em `docs/beehiiv.md`.
+
+---
+
+## Fase 4 — Vinhos ✅
+
+**Feito**
+
+- `/vinhos`: índice filtrável por tipo, cor na taça, país, uva, faixa de preço e corpo.
+  Os filtros são links — compartilháveis e rastreáveis pelo buscador.
+  A régua cromática no topo funciona como navegação.
+- `/vinhos/[slug]`: o veredito vem antes de tudo, a nota em taças, a régua com a posição
+  da garrafa marcada, ficha técnica em lista de definição, harmonizações, como servir,
+  onde encontrar e FAQ.
+- JSON-LD de `Review` sobre `Product`, com `AggregateOffer` derivado da faixa de preço.
+
+---
+
+## Fase 5 — Guias, Agenda, Sobre e busca ✅
+
+**Feito**
+
+- `/guias` agrupado por tema, com filtro de nível, e `/guias/[slug]` com o bloco
+  "Em resumo" no alto — a parte mais citável da página — e data de atualização visível.
+- `/agenda` agrupada por mês, com JSON-LD de `Event`.
+- `/sobre`: a âncora de autoridade. Bio, credenciais, **como avaliamos** (a régua de
+  notas explicada) e **a escala cromática** explicada faixa por faixa.
+- `/busca`: busca simultânea em matérias, guias, fichas e edições.
+- Páginas de erro e 404 com o mesmo tom editorial do resto.
+
+---
+
+## Fase 6 — SEO, GEO, performance e acessibilidade ✅
+
+**Feito**
+
+- JSON-LD por tipo: `Article` nas matérias e guias, `Review` + `Product` nas fichas,
+  `PublicationIssue` + `Periodical` no boletim, `Person` na autora com `sameAs`,
+  `NewsMediaOrganization` na Tanin, `FAQPage` onde há FAQ, `BreadcrumbList` em tudo.
+- `sitemap.xml` e `robots.txt` gerados sozinhos. **Nenhum robô de IA bloqueado** — eles
+  aparecem nominalmente e liberados, por decisão, não por descuido.
+- `llms.txt` na raiz, apontando o conteúdo evergreen principal.
+- **RSS com texto integral**, não só resumo.
+- Metadados em todas as rotas, com queda sensata quando o campo de SEO está vazio.
+- HTML semântico: um `h1` por página, `<time datetime>`, `<figure>`/`<figcaption>`,
+  `nav` com rótulo. Alvos de toque de 44px. Foco visível em tudo.
+- Imagens por `next/image` com `sizes` declarado; fontes com `display: swap`.
+
+---
+
+## Decisões que tomei sozinho — e que você pode reverter
+
+Estas apareceram no meio do caminho. Registrei a escolha e o motivo; nenhuma é cara de
+desfazer, mas vale você saber que existem.
+
+### 1. A escala de nota é de **5 taças, com meias taças** — não de 100 pontos
+
+A escala de 100 é o dialeto da indústria. Comunica bem para quem vende vinho e mal para
+quem bebe — ninguém fora do ramo sabe dizer o que separa um 89 de um 91. Como o público
+é consumidor final e não técnico, a régua de cinco é a que ele já usa todo dia.
+
+O peso da citação por IA não fica com o número, e sim com o **veredito** de cada ficha.
+O número entra no código estruturado com a escala declarada (`bestRating`/`worstRating`),
+então buscadores interpretam corretamente qualquer que seja a régua.
+
+**Se quiser trocar para 100 pontos:** mexe-se em `src/lib/nota.ts` e no campo `nota` de
+`src/collections/Vinhos.ts`. Mais nada no projeto conhece a escala. Mas quanto mais
+fichas existirem, mais fichas precisarão ser renotadas — então decida cedo.
+
+### 2. Preço em **faixa**, com data de conferência visível
+
+Preço de importado muda toda semana, e ficha com número velho perde a confiança de quem
+lê. As faixas envelhecem bem e a data deixa claro quando foi conferido.
+
+### 3. **Espelho local das inscrições** do boletim
+
+O beehiiv continua sendo a lista oficial. Mas se a chave não estiver configurada ou a
+API cair, a inscrição fica guardada no painel, em "Inscrições no Boletim", marcada como
+pendente. Ninguém se perde no caminho.
+
+### 4. Filtros e paginação como **links**, não como botões de JavaScript
+
+Custou um pouco mais de código e paga em duas moedas: cada recorte pode ser mandado por
+WhatsApp, e o buscador consegue percorrer o acervo inteiro.
+
+---
+
+## O que precisa de você
+
+### 🔴 1. Senha do banco no Supabase — bloqueia o deploy
+
+O portal fala com o Postgres do Supabase direto, e para isso precisa da senha do banco,
+que só aparece para você.
+
+**Onde pegar:** Supabase → seu projeto → *Project Settings* → *Database* →
+*Connection string* → aba **URI**. Copie a linha inteira e troque `[YOUR-PASSWORD]` pela
+senha do banco.
+
+Depois coloque em `DATABASE_URI`, tanto no `.env` local quanto nas variáveis de ambiente
+da Vercel. Use a porta **6543** (*Transaction pooler*) na Vercel e ligue `DATABASE_SSL=true`.
+
+O projeto que você me passou (`ekdglgmbyhnngippohvh`) já está registrado em
+`.env.example` e em `NEXT_PUBLIC_SUPABASE_URL`; falta só a senha.
+
+### 🔴 2. Onde as imagens vão morar em produção
+
+A Vercel apaga os arquivos a cada deploy, então as imagens precisam ficar fora dela.
+O portal já fala o dialeto S3, que serve para o Storage do Supabase.
+
+**O que fazer:** Supabase → *Storage* → criar um bucket público chamado `midia`; depois
+*Project Settings* → *Storage* → *S3 Access Keys* → gerar uma chave. Preencher
+`S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID` e `S3_SECRET_ACCESS_KEY`.
+
+Sem isso o site funciona, mas cada deploy apaga as imagens enviadas pelo painel.
+
+### 🟡 3. O plano do beehiiv dá acesso à API?
+
+A importação das 22 edições e o formulário de inscrição integrado dependem da API do
+beehiiv, que **exige o plano Scale**.
+
+- **Se o plano atual tiver API:** pegue a chave em beehiiv → *Settings* → *Integrations*
+  → *API*, e preencha `BEEHIIV_API_KEY` e `BEEHIIV_PUBLICATION_ID`. A importação roda
+  com um comando.
+- **Se não tiver:** o formulário do site continua funcionando (as inscrições ficam no
+  painel para sincronizar depois), mas as 22 edições precisarão ser passadas à mão ou o
+  plano precisa subir. Me avise que eu ajusto o plano de migração.
+
+Detalhes em `docs/beehiiv.md`.
+
+### 🟡 4. O que fazer com as URLs antigas do beehiiv
+
+**Minha recomendação: manter no ar com `canonical` apontando para o portal.** Quem já
+linkou uma edição continua chegando em algum lugar, e a autoridade desses links passa a
+contar para o portal em vez de para o beehiiv. Despublicar joga fora esse acúmulo.
+
+Precisa de você porque depende do que o beehiiv permite configurar no seu plano.
+
+### 🟢 5. Conteúdo real
+
+O que está no ar agora é **conteúdo de exemplo**, gerado para você ver o portal
+funcionando de verdade — com voz editorial plausível, mas fictício. Produtores e rótulos
+das fichas **são inventados de propósito**: não seria honesto atribuir notas a vinhos
+reais sem alguém tê-los provado.
+
+Antes de abrir ao público: rodar `pnpm seed --limpar`, ou apagar pelo painel, e publicar
+o conteúdo verdadeiro.
+
+### 🟢 6. Fotos e ilustrações
+
+Não há nenhuma imagem no projeto. O design foi feito para aguentar isso — onde falta
+foto, a cor da escala assume o lugar. Mas a home ganha muito com uma ilustração de
+abertura, e a página `/sobre` pede uma foto sua.
+
+A direção visual pede **ilustração acima de foto de banco de imagem**. Se quiser, posso
+sugerir uma referência de estilo antes de você encomendar.
+
+---
+
+## O que ficou de fora, de propósito
+
+Conforme combinado: área logada, checkout, clube e loja. Nada no que foi construído
+impede acrescentá-los — as coleções, o controle de acesso e a autenticação do Payload já
+estão de pé, então um dia isso é acréscimo, não reescrita.

@@ -73,7 +73,7 @@ export default function PaginaDeEstilo() {
           titulo="Paleta"
           descricao="Cinco cores, e só. Escuridão e clareza vêm da tipografia e do espaço, não de sombras."
         >
-          <ul className="grid grid-cols-2 gap-px bg-fio sm:grid-cols-3 lg:grid-cols-5">
+          <ul className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
             {[
               { nome: 'Tinta', token: '--color-tinta', hex: '#14110F', uso: 'Texto e fios fortes' },
               { nome: 'Papel', token: '--color-papel', hex: '#FAF8F5', uso: 'Fundo, nunca branco puro' },
@@ -81,7 +81,7 @@ export default function PaginaDeEstilo() {
               { nome: 'Grafite', token: '--color-grafite', hex: '#4A4744', uso: 'Texto secundário' },
               { nome: 'Fio', token: '--color-fio', hex: '#DDD8D0', uso: 'Divisórias de 1px' },
             ].map((cor) => (
-              <li key={cor.nome} className="bg-papel p-4">
+              <li key={cor.nome}>
                 <span
                   className="block h-20 w-full border border-tinta/10"
                   style={{ backgroundColor: cor.hex }}
@@ -107,9 +107,12 @@ export default function PaginaDeEstilo() {
             {ESCALA_POR_FAMILIA.map((grupo) => (
               <div key={grupo.familia}>
                 <h3 className="rotulo border-b border-fio pb-2 text-grafite">{grupo.nome}</h3>
-                <ul className="mt-4 grid gap-px bg-fio sm:grid-cols-2 lg:grid-cols-3">
+                <ul className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3">
                   {grupo.faixas.map((faixa) => (
-                    <li key={faixa.id} className="flex gap-4 bg-papel p-4">
+                    <li
+                      key={faixa.id}
+                      className="flex gap-4 border-b border-fio py-4 pr-4 sm:[&:nth-child(odd)]:pr-8 lg:pr-8"
+                    >
                       <span
                         aria-hidden="true"
                         className="h-14 w-14 flex-none"
