@@ -1,0 +1,50 @@
+{
+  "name": "tanin-portal",
+  "version": "0.1.0",
+  "description": "Portal Tanin — a casa canônica do conteúdo sobre vinho de Ana Luiza Leal",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "generate:types": "payload generate:types",
+    "generate:importmap": "payload generate:importmap",
+    "payload": "payload",
+    "seed": "tsx scripts/semear.ts",
+    "importar:beehiiv": "tsx scripts/importar-beehiiv.ts"
+  },
+  "dependencies": {
+    "@payloadcms/db-postgres": "3.87.0",
+    "@payloadcms/next": "3.87.0",
+    "@payloadcms/richtext-lexical": "3.87.0",
+    "@payloadcms/storage-s3": "3.87.0",
+    "@payloadcms/translations": "3.87.0",
+    "graphql": "16.11.0",
+    "next": "16.3.0",
+    "payload": "3.87.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "sharp": "0.34.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "22.18.1",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.1",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  }
+}

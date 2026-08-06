@@ -1,0 +1,23 @@
+# dependências
+node_modules
+.pnpm-store
+
+# next
+.next
+out
+next-env.d.ts
+
+# ambiente
+.env
+.env.local
+.env*.local
+
+# payload
+/media
+/public/media
+
+# sistema
+.DS_Store
+*.log
+.vercel
+.turbo

@@ -1,0 +1,45 @@
+/**
+ * Ajustes visuais do painel.
+ *
+ * O objetivo aqui é modesto de propósito: fazer o /admin parecer da Tanin sem
+ * reescrever o design do Payload. Quanto menos CSS próprio, menos coisa quebra
+ * quando o Payload atualizar. CSS puro, sem pré-processador, para não acrescentar
+ * uma dependência que existiria só por causa deste arquivo.
+ */
+
+html[data-theme='light'] {
+  --theme-bg: #faf8f5;
+  --theme-elevation-0: #ffffff;
+  --theme-elevation-800: #14110f;
+  --theme-elevation-900: #14110f;
+  --theme-elevation-1000: #000000;
+  --theme-success-500: #4a7c59;
+}
+
+/* O vinho da marca como cor de ação do painel. */
+.btn--style-primary {
+  --color: #faf8f5;
+  background-color: #6b2130;
+  border-color: #6b2130;
+}
+
+.btn--style-primary:hover,
+.btn--style-primary:focus-visible {
+  background-color: #4e1620;
+  border-color: #4e1620;
+}
+
+/* Descrições de campo com mais ar — o painel é cheio de instruções escritas
+   para quem não é técnico, e elas precisam ser efetivamente lidas. */
+.field-description {
+  line-height: 1.45;
+  max-width: 62ch;
+  opacity: 0.85;
+}
+
+/* Agrupadores da barra lateral em caixa alta, como os rótulos do site. */
+.nav-group__toggle {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
