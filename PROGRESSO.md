@@ -214,8 +214,8 @@ por nenhum arquivo. Cole estas:
 > região no nome (`aws-0-us-east-1…`), e eu não consegui confirmar a sua daqui: este
 > ambiente só tem saída HTTPS, e Postgres fala outro protocolo em outra porta. Tentei
 > conectar e não passou — então o que está no `.env` é a melhor suposição, não uma
-> verificação. Em *Project Settings* → *Database* → *Connection string* → **URI** vem o
-> host certo.
+> verificação. O host certo vem do botão **Connect**, no topo do painel do projeto,
+> na aba **Transaction pooler**. Confira antes de subir com `pnpm testar:banco`.
 
 **Recomendo trocar a senha do banco depois de configurar.** Ela passou por uma conversa
 de chat, o que significa que ficou registrada em pelo menos um lugar além do cofre do

@@ -123,7 +123,7 @@ subir para produção, `pnpm migrate:criar <nome-do-que-mudou>`.
 
    | Variável | Onde achar |
    | --- | --- |
-   | `DATABASE_URI` | Supabase → *Project Settings* → *Database* → *Connection string* → **URI**, opção **Transaction pooler** (porta 6543) |
+   | `DATABASE_URI` | Supabase → botão **Connect**, no topo do painel do projeto → **Transaction pooler** (porta 6543). Copie a linha e troque `[YOUR-PASSWORD]` pela senha do banco |
    | `PAYLOAD_SECRET` | gere: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
    | `NEXT_PUBLIC_URL_SITE` | o endereço final do portal, sem barra no fim |
 
@@ -134,6 +134,9 @@ subir para produção, `pnpm migrate:criar <nome-do-que-mudou>`.
    > projeto. Errar qualquer um dos dois derruba o deploy com
    > `tenant or user not found`. Para conferir antes de subir:
    > `pnpm testar:banco 'postgresql://...'`
+   >
+   > O botão **Connect** fica no topo da tela do projeto, ao lado do nome dele — não
+   > dentro de *Project Settings*, onde já esteve.
 
 3. **O primeiro deploy cria o banco sozinho.** O comando de build roda `payload migrate`
    antes de construir, e as migrações estão versionadas em `src/migrations/`. Você não

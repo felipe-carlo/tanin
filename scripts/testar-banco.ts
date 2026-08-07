@@ -52,7 +52,7 @@ function explicar(erro: { message?: string; code?: string }): string[] {
       'pooler, e o número no começo do nome (aws-0, aws-1, aws-2…) faz parte dele.',
       '',
       'O que fazer: copie a linha exata do painel, em vez de montá-la à mão —',
-      'Supabase → Project Settings → Database → Connection string → aba URI.',
+      'Supabase → botão Connect, no topo do painel → aba Transaction pooler.',
       'Atalho: se está usando aws-0, tente aws-1, e vice-versa.',
     ]
   }
@@ -74,7 +74,7 @@ function explicar(erro: { message?: string; code?: string }): string[] {
       '',
       'Provavelmente há um erro de digitação, ou a região está errada.',
       'A região faz parte do nome do servidor (us-west-2, sa-east-1…).',
-      'Copie a linha do painel: Project Settings → Database → Connection string → URI.',
+      'Copie a linha do painel: botão Connect, no topo → aba Transaction pooler.',
     ]
   }
 
