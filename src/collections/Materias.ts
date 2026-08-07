@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { enderecoDoSite } from '@/lib/endereco'
+
 import { autenticado, lerPublicados, somenteAdministrador } from '@/lib/acesso'
 import { ganchosDeRevalidacao } from '@/hooks/revalidar'
 import { editorTanin } from '@/fields/editor'
@@ -24,10 +26,10 @@ export const Materias: CollectionConfig = {
     description: 'O jornalismo do portal: reportagens, ensaios, entrevistas.',
     livePreview: {
       url: ({ data }) =>
-        `${process.env.NEXT_PUBLIC_URL_SITE ?? 'http://localhost:3000'}/materias/${data?.slug ?? ''}`,
+        `${enderecoDoSite()}/materias/${data?.slug ?? ''}`,
     },
     preview: (doc) =>
-      `${process.env.NEXT_PUBLIC_URL_SITE ?? 'http://localhost:3000'}/materias/${doc?.slug ?? ''}`,
+      `${enderecoDoSite()}/materias/${doc?.slug ?? ''}`,
   },
   access: {
     read: lerPublicados,

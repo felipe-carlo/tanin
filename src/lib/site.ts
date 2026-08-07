@@ -1,15 +1,11 @@
 import { cache } from 'react'
 
+import { enderecoDoSite } from '@/lib/endereco'
 import { obterPayload } from '@/lib/payload'
 import type { Configuracoes } from '@/payload-types'
 
 /** Endereço público do portal, sem barra no fim. */
-export const URL_SITE = (
-  process.env.NEXT_PUBLIC_URL_SITE ??
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : 'http://localhost:3000')
-).replace(/\/$/, '')
+export const URL_SITE = enderecoDoSite()
 
 export const NOME_SITE = 'Tanin'
 

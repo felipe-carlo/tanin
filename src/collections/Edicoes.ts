@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { enderecoDoSite } from '@/lib/endereco'
+
 import { autenticado, lerPublicados, somenteAdministrador } from '@/lib/acesso'
 import { ganchosDeRevalidacao } from '@/hooks/revalidar'
 import { editorTanin } from '@/fields/editor'
@@ -21,7 +23,7 @@ export const Edicoes: CollectionConfig = {
     description:
       'O arquivo do Boletim. Cada edição vira uma página própria e uma faixa na fita cromática.',
     preview: (doc) =>
-      `${process.env.NEXT_PUBLIC_URL_SITE ?? 'http://localhost:3000'}/boletim/${doc?.slug ?? ''}`,
+      `${enderecoDoSite()}/boletim/${doc?.slug ?? ''}`,
   },
   access: {
     read: lerPublicados,

@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { enderecoDoSite } from '@/lib/endereco'
+
 import { autenticado, lerPublicados, somenteAdministrador } from '@/lib/acesso'
 import { ganchosDeRevalidacao } from '@/hooks/revalidar'
 import { editorTanin } from '@/fields/editor'
@@ -33,7 +35,7 @@ export const Guias: CollectionConfig = {
     description:
       'Conteúdo que não vence. É o que sustenta o tráfego de busca e o que as IAs citam como referência.',
     preview: (doc) =>
-      `${process.env.NEXT_PUBLIC_URL_SITE ?? 'http://localhost:3000'}/guias/${doc?.slug ?? ''}`,
+      `${enderecoDoSite()}/guias/${doc?.slug ?? ''}`,
   },
   access: {
     read: lerPublicados,

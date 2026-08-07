@@ -26,6 +26,7 @@ import { Usuarios } from '@/collections/Usuarios'
 import { Vinhos } from '@/collections/Vinhos'
 import { Configuracoes } from '@/globals/Configuracoes'
 import { editorTanin } from '@/fields/editor'
+import { enderecoDoSite } from '@/lib/endereco'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -61,7 +62,7 @@ const plugins = armazenamentoConfigurado
   : []
 
 export default buildConfig({
-  serverURL: process.env.NEXT_PUBLIC_URL_SITE ?? 'http://localhost:3000',
+  serverURL: enderecoDoSite(),
   admin: {
     user: Usuarios.slug,
     importMap: { baseDir: path.resolve(dirname) },

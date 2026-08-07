@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { enderecoDoSite } from '@/lib/endereco'
+
 import { autenticado, lerPublicados, somenteAdministrador } from '@/lib/acesso'
 import { ganchosDeRevalidacao } from '@/hooks/revalidar'
 import { editorTanin } from '@/fields/editor'
@@ -49,7 +51,7 @@ export const Vinhos: CollectionConfig = {
     description:
       'As fichas. Cada uma é uma página que responde uma pergunta inteira sobre uma garrafa.',
     preview: (doc) =>
-      `${process.env.NEXT_PUBLIC_URL_SITE ?? 'http://localhost:3000'}/vinhos/${doc?.slug ?? ''}`,
+      `${enderecoDoSite()}/vinhos/${doc?.slug ?? ''}`,
   },
   access: {
     read: lerPublicados,
