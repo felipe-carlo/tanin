@@ -100,6 +100,7 @@ Dois arquivos concentram as decisões que mais importam:
 | `pnpm build` | Gera a versão de produção |
 | `pnpm start` | Roda a versão de produção já gerada |
 | `pnpm typecheck` | Confere os tipos sem gerar nada |
+| `pnpm testar:banco` | Diz se um endereço de banco conecta — e, se não, o que fazer |
 | `pnpm seed` | Popula o banco com conteúdo de exemplo |
 | `pnpm importar:beehiiv` | Importa as edições antigas do beehiiv como rascunho |
 | `pnpm generate:types` | Regenera os tipos depois de mexer nas coleções |
@@ -127,6 +128,12 @@ subir para produção, `pnpm migrate:criar <nome-do-que-mudou>`.
    | `NEXT_PUBLIC_URL_SITE` | o endereço final do portal, sem barra no fim |
 
    Acrescente também `DATABASE_SSL=true` — o Supabase exige conexão criptografada.
+
+   > **Copie a linha do painel, não monte à mão.** O nome do servidor do pooler carrega
+   > a região *e* um número de fragmento (`aws-0`, `aws-1`…) que muda de projeto para
+   > projeto. Errar qualquer um dos dois derruba o deploy com
+   > `tenant or user not found`. Para conferir antes de subir:
+   > `pnpm testar:banco 'postgresql://...'`
 
 3. **O primeiro deploy cria o banco sozinho.** O comando de build roda `payload migrate`
    antes de construir, e as migrações estão versionadas em `src/migrations/`. Você não
