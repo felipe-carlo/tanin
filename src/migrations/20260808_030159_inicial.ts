@@ -487,7 +487,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"usuarios_id" integer
   );
   
-  CREATE TABLE "payload_migrations" (
+  CREATE TABLE IF NOT EXISTS "payload_migrations" (
   	"id" serial PRIMARY KEY NOT NULL,
   	"name" varchar,
   	"batch" numeric,
@@ -764,8 +764,8 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "payload_preferences_rels_parent_idx" ON "payload_preferences_rels" USING btree ("parent_id");
   CREATE INDEX "payload_preferences_rels_path_idx" ON "payload_preferences_rels" USING btree ("path");
   CREATE INDEX "payload_preferences_rels_usuarios_id_idx" ON "payload_preferences_rels" USING btree ("usuarios_id");
-  CREATE INDEX "payload_migrations_updated_at_idx" ON "payload_migrations" USING btree ("updated_at");
-  CREATE INDEX "payload_migrations_created_at_idx" ON "payload_migrations" USING btree ("created_at");
+  CREATE INDEX IF NOT EXISTS "payload_migrations_updated_at_idx" ON "payload_migrations" USING btree ("updated_at");
+  CREATE INDEX IF NOT EXISTS "payload_migrations_created_at_idx" ON "payload_migrations" USING btree ("created_at");
   CREATE INDEX "configuracoes_autora_credenciais_order_idx" ON "configuracoes_autora_credenciais" USING btree ("_order");
   CREATE INDEX "configuracoes_autora_credenciais_parent_id_idx" ON "configuracoes_autora_credenciais" USING btree ("_parent_id");
   CREATE INDEX "configuracoes_autora_redes_order_idx" ON "configuracoes_autora_redes" USING btree ("_order");
