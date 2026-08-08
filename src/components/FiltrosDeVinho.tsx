@@ -122,7 +122,7 @@ export function FiltrosDeVinho({
     tipos: string[]
     precos: string[]
     cores: string[]
-    uvas: { slug: string; nome: string }[]
+    uvas: string[]
   }
 }) {
   return (
@@ -189,12 +189,12 @@ export function FiltrosDeVinho({
         <GrupoDeFiltro titulo="Uva" abertoPorPadrao={false}>
           <ul className="max-h-72 overflow-y-auto pr-2">
             {opcoes.uvas.map((uva) => (
-              <li key={uva.slug}>
+              <li key={uva}>
                 <Opcao
-                  endereco={alternar(parametros, 'uva', uva.slug)}
-                  ativo={estaAtivo(parametros, 'uva', uva.slug)}
+                  endereco={alternar(parametros, 'uva', uva)}
+                  ativo={estaAtivo(parametros, 'uva', uva)}
                 >
-                  {uva.nome}
+                  {uva}
                 </Opcao>
               </li>
             ))}
@@ -244,7 +244,8 @@ export function FiltrosAtivos({ parametros }: { parametros: ParametrosDeBusca })
     preco: (valor) => rotuloPreco(valor) ?? valor,
     cor: (valor) => faixaPorId(valor).nome,
     pais: (valor) => valor,
-    uva: (valor) => valor.replace(/-/g, ' '),
+    // O valor do filtro de uva já é o nome como está escrito na ficha.
+    uva: (valor) => valor,
     corpo: (valor) => valor.charAt(0).toUpperCase() + valor.slice(1),
   }
 

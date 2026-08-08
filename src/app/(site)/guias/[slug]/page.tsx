@@ -11,13 +11,16 @@ import { JsonLd } from '@/components/JsonLd'
 import { Migalhas } from '@/components/Migalhas'
 import { TituloDeSecao } from '@/components/Secao'
 import { TextoRico } from '@/components/TextoRico'
-import { TIPOS_DE_GUIA } from '@/collections/Guias'
+import { TIPOS_DE_GUIA } from '@/collections/Textos'
 import { dataPorExtenso, iso } from '@/lib/formatar'
 import { montarMetadados } from '@/lib/metadados'
 import { obterPayload } from '@/lib/payload'
-import { listarGuias, obterGuia } from '@/lib/consultas'
+import { listarTextos, obterTexto } from '@/lib/consultas'
 import { schemaDeFaq, schemaDeMigalhas, schemaDoGuia } from '@/lib/schema'
-import type { Autor, Guia, Materia, Vinho } from '@/payload-types'
+import { enderecoDoDoc } from '@/lib/secoes'
+import { autoraDe, obterConfiguracoes } from '@/lib/site'
+import { resumoOuTrecho } from '@/lib/texto'
+import type { Vinho } from '@/payload-types'
 
 export const revalidate = 3600
 
@@ -25,8 +28,10 @@ export async function generateStaticParams() {
   try {
     const payload = await obterPayload()
     const guias = await payload.find({
-      collection: 'guias',
-      where: { _status: { equals: 'published' } },
+      collection: 'textos',
+      where: {
+        and: [{ _status: { equals: 'published' } }, { secao: { equals: 'guia' } }],
+      },
       limit: 500,
       depth: 0,
       select: { slug: true },
@@ -42,44 +47,45 @@ type Props = { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const guia = await obterGuia(slug)
+  const [guia, config] = await Promise.all([obterTexto('guia', slug), obterConfiguracoes()])
   if (!guia) return { title: 'Guia não encontrado' }
 
-  const autor = guia.autor && typeof guia.autor === 'object' ? (guia.autor as Autor) : null
+  const autora = autoraDe(config)
 
   return montarMetadados({
     seo: guia.seo,
     titulo: guia.titulo,
-    descricao: guia.resumo,
+    descricao: resumoOuTrecho(guia),
     imagem: guia.destaque?.imagem,
     caminho: `/guias/${guia.slug}`,
     publicadoEm: guia.dataPublicacao,
     atualizadoEm: guia.dataAtualizacao ?? guia.updatedAt,
-    autores: autor ? [autor.nome] : undefined,
+    autores: autora.nome ? [autora.nome] : undefined,
     secao: 'Guias',
   })
 }
 
 export default async function PaginaDoGuia({ params }: Props) {
   const { slug } = await params
-  const guia = await obterGuia(slug)
+  const [guia, config] = await Promise.all([obterTexto('guia', slug), obterConfiguracoes()])
   if (!guia) notFound()
 
-  const autor = guia.autor && typeof guia.autor === 'object' ? (guia.autor as Autor) : null
+  const autora = autoraDe(config)
   const tipoRotulo = TIPOS_DE_GUIA.find((tipo) => tipo.value === guia.tipoGuia)?.label
 
-  const vinhos = (guia.vinhosExemplo ?? []).filter(
-    (item): item is Vinho => typeof item === 'object',
+  // Vinhos relacionados viram os cartões "garrafas que exemplificam";
+  // o resto vai para o "ver também" do trilho lateral.
+  const relacionados = (guia.relacionados ?? []).filter(
+    (item) => typeof item.value === 'object',
   )
+  const vinhos = relacionados
+    .filter((item) => item.relationTo === 'vinhos')
+    .map((item) => item.value as Vinho)
+  const verTambem = relacionados.filter((item) => item.relationTo === 'textos')
 
-  const relacionados = (guia.conteudosRelacionados ?? [])
-    .filter((item) => typeof item === 'object' && item !== null && 'value' in item)
-    .map((item) => item as { relationTo: string; value: Materia | Guia | Vinho })
-    .filter((item) => typeof item.value === 'object')
-
-  const outros = (await listarGuias({ limite: 4, tipo: guia.tipoGuia })).docs.filter(
-    (outro) => outro.id !== guia.id,
-  )
+  const outros = (
+    await listarTextos({ secao: 'guia', limite: 4, tipoGuia: guia.tipoGuia ?? undefined })
+  ).docs.filter((outro) => outro.id !== guia.id)
 
   const atualizadoEm = guia.dataAtualizacao ?? guia.updatedAt
   const trilha = [
@@ -128,7 +134,7 @@ export default async function PaginaDoGuia({ params }: Props) {
             <p className="rotulo mt-7 text-grafite">
               Atualizado em{' '}
               <time dateTime={iso(atualizadoEm)}>{dataPorExtenso(atualizadoEm)}</time>
-              {autor ? ` · por ${autor.nome}` : ''}
+              {autora.nome ? ` · por ${autora.nome}` : ''}
             </p>
           </div>
 
@@ -164,15 +170,17 @@ export default async function PaginaDoGuia({ params }: Props) {
 
         <div className="grade mt-12 md:mt-16">
           <div className="col-span-6 lg:col-span-7 lg:col-start-2">
-            <p className="mb-10 border-l border-borra pl-5 text-corpo-grande leading-relaxed bonito">
-              {guia.resumo}
-            </p>
+            {guia.resumo && (
+              <p className="mb-10 border-l border-borra pl-5 text-corpo-grande leading-relaxed bonito">
+                {guia.resumo}
+              </p>
+            )}
 
             <TextoRico dados={guia.corpo} />
 
             <Faq perguntas={guia.faq} />
 
-            {autor && <BlocoAutor autor={autor} />}
+            <BlocoAutor autor={autora} />
           </div>
 
           {/* Um `div`, e não um `aside`: cada bloco aqui dentro já é uma `section` com
@@ -180,25 +188,19 @@ export default async function PaginaDoGuia({ params }: Props) {
               aninhado no artigo não acrescentaria informação nenhuma. */}
           <div className="col-span-6 lg:col-span-3 lg:col-start-10">
             <div className="space-y-12 lg:sticky lg:top-[calc(var(--altura-cabecalho)+2rem)]">
-              {relacionados.length > 0 && (
+              {verTambem.length > 0 && (
                 <section>
                   <h2 className="rotulo border-b border-tinta pb-3">Ver também</h2>
                   <ul className="mt-4 space-y-3">
-                    {relacionados.map((item, indice) => {
-                      const base =
-                        item.relationTo === 'materias'
-                          ? '/materias'
-                          : item.relationTo === 'vinhos'
-                            ? '/vinhos'
-                            : '/guias'
-                      const doc = item.value as { slug?: string; titulo?: string; nome?: string }
+                    {verTambem.map((item, indice) => {
+                      const doc = item.value as { slug?: string; secao?: string; titulo?: string }
                       return (
                         <li key={`${item.relationTo}-${indice}`}>
                           <Link
-                            href={`${base}/${doc.slug}`}
+                            href={enderecoDoDoc(item.relationTo, doc)}
                             className="link-titulo text-apoio leading-snug"
                           >
-                            {doc.titulo ?? doc.nome}
+                            {doc.titulo}
                           </Link>
                         </li>
                       )
@@ -244,7 +246,7 @@ export default async function PaginaDoGuia({ params }: Props) {
         </section>
       )}
 
-      <JsonLd dados={[schemaDoGuia(guia), schemaDeFaq(guia.faq), schemaDeMigalhas(trilha)]} />
+      <JsonLd dados={[schemaDoGuia(guia, autora), schemaDeFaq(guia.faq), schemaDeMigalhas(trilha)]} />
     </>
   )
 }

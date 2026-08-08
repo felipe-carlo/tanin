@@ -3,7 +3,7 @@
 Documento de acompanhamento. Cada fase registra **o que foi feito**, **o que ficou
 pendente** e **o que precisa de decisão sua**.
 
-Última atualização: fases 1 a 6 concluídas.
+Última atualização: fases 1 a 7 concluídas.
 
 ---
 
@@ -13,7 +13,7 @@ pendente** e **o que precisa de decisão sua**.
 pnpm install          # instala tudo
 pnpm dev              # sobe o site em http://localhost:3000
                       # e o painel em http://localhost:3000/admin
-pnpm seed             # popula o banco com conteúdo de exemplo
+pnpm semear           # popula o banco com conteúdo de exemplo
 pnpm build            # gera a versão de produção
 ```
 
@@ -154,6 +154,55 @@ compartilhamento no WhatsApp e fora do Google Imagens.
 
 ---
 
+## Fase 7 — O painel virou um Substack ✅
+
+O CMS foi reestruturado de ponta a ponta. O diagnóstico: 14 coleções com dependências
+cruzadas — para publicar a primeira matéria era preciso passar por até 4 telas (criar
+Autor, criar Categoria, subir Mídia) antes de escrever a primeira linha.
+
+**O que mudou**
+
+- **De 14 coleções para 5.** Matérias, Boletim e Guias viraram uma coleção só,
+  **Textos**: o campo "Seção" decide a forma e o endereço. Sobraram Textos, Vinhos,
+  Mídia, Inscrições e Usuários.
+- **Uma tela para escrever.** O formulário de texto não tem mais abas: título, corpo e
+  publicar. Tudo o mais é opcional e mora na lateral. Só título e corpo são
+  obrigatórios.
+- **Zero telas de apoio.** Somem as coleções de Autores, Categorias, Tags, Uvas,
+  Regiões e Importadoras. A editoria da matéria é um select fixo; uva, região e
+  importadora são texto simples na ficha; a ficha da autora mora em Configurações
+  (aba "Autora"). Imagem se envia direto do formulário, sem visitar "Mídia" antes.
+- **O resumo ficou opcional** — em branco, o site usa as primeiras linhas do texto.
+- **A edição do Boletim se numera sozinha** ao publicar (maior número + 1), a cor da
+  faixa continua vindo da numeração, e o índice "Nesta edição" agora nasce dos títulos
+  H2 do próprio corpo — não existe mais a aba "Blocos e âncoras".
+- **Agenda removida** (coleção Eventos e página /agenda), como combinado.
+- **O site público não mudou** para o leitor: /materias, /boletim, /guias, /vinhos,
+  /sobre e /busca continuam iguais, agora lendo do modelo novo.
+- **Painel 100% português do Brasil.** O inglês saiu do seletor de idioma e as
+  traduções do próprio Payload — que vinham em português de Portugal com sobras de
+  inglês ("Iniciar sessão", "Tem a certeza?", "Log out", "Upload em Massa", "Cultura"
+  como tradução de *crop*) — foram sobrescritas uma a uma em `src/admin/traducoes.ts`.
+- **Banco recomeçado limpo**: uma única migração inicial do modelo novo; o seed foi
+  reescrito preservando todo o conteúdo editorial de exemplo (agora 40 textos e 16
+  fichas), e a importação do beehiiv grava direto em Textos.
+
+### 🔴 Atenção no próximo deploy
+
+O banco de produção (Supabase) ainda tem as tabelas do modelo antigo, e as migrações
+antigas não existem mais. **Antes do primeiro deploy desta versão**, rode no SQL editor
+do Supabase:
+
+```sql
+drop schema public cascade; create schema public;
+```
+
+Sem isso o `payload migrate` do build falha. Isso apaga também os usuários do painel —
+abra `/admin` depois do deploy e crie o primeiro acesso de novo (a primeira pessoa vira
+administradora). Arquivos órfãos no bucket de mídia são inofensivos.
+
+---
+
 ## Decisões que tomei sozinho — e que você pode reverter
 
 Estas apareceram no meio do caminho. Registrei a escolha e o motivo; nenhuma é cara de
@@ -262,7 +311,7 @@ funcionando de verdade — com voz editorial plausível, mas fictício. Produtor
 das fichas **são inventados de propósito**: não seria honesto atribuir notas a vinhos
 reais sem alguém tê-los provado.
 
-Antes de abrir ao público: rodar `pnpm seed --limpar`, ou apagar pelo painel, e publicar
+Antes de abrir ao público: rodar `pnpm semear --limpar`, ou apagar pelo painel, e publicar
 o conteúdo verdadeiro.
 
 ### 🟢 6. Fotos e ilustrações

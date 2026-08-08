@@ -2,7 +2,7 @@
  * SEMEADOR DO PORTAL TANIN
  *
  * Popula o banco com um acervo de exemplo que se parece com o portal em operação:
- * matérias, edições do Boletim, fichas de vinho, guias, agenda e taxonomia.
+ * textos (matérias, edições do Boletim e guias) e fichas de vinho.
  *
  * Duas decisões governam este arquivo:
  *
@@ -16,12 +16,13 @@
  *     lorem ipsum esconde exatamente os problemas de design que ele deveria revelar.
  *
  * Uso:
- *   pnpm seed              semeia (ou atualiza) tudo
- *   pnpm seed --limpar     ESVAZIA as coleções de conteúdo e taxonomia antes de semear
+ *   pnpm semear              semeia (ou atualiza) tudo
+ *   pnpm semear --limpar     ESVAZIA as coleções de conteúdo antes de semear
  *
  * `--limpar` não sabe distinguir o que veio deste arquivo do que foi escrito à mão no
- * painel: ele apaga TODOS os documentos das coleções listadas em `COLECOES_SEMEADAS`.
- * Serve para banco de desenvolvimento e nada além disso. Usuários e mídia ficam de fora.
+ * painel: ele apaga TODOS os documentos das coleções listadas em `COLECOES_SEMEADAS`
+ * (textos e vinhos). Serve para banco de desenvolvimento e nada além disso.
+ * Usuários e mídia ficam de fora.
  *
  * Produtores, rótulos e importadoras são FICTÍCIOS de propósito. Atribuir nota a um
  * vinho real de um produtor real em dados de demonstração seria publicar uma avaliação
@@ -31,8 +32,7 @@
 import { getPayload } from 'payload'
 import type { CollectionSlug, RequiredDataFromCollectionSlug, Where } from 'payload'
 
-import { paraSlug } from '../src/fields/slug'
-import type { Evento, Guia, Materia, Vinho } from '../src/payload-types'
+import type { Texto, Vinho } from '../src/payload-types'
 
 /**
  * Os valores fechados das sementes saem dos tipos gerados pelo Payload, e não de
@@ -43,14 +43,14 @@ import type { Evento, Guia, Materia, Vinho } from '../src/payload-types'
  * Payload depois de metade do acervo já ter sido escrita. Com a união, o `tsc` recusa
  * antes de o script chegar perto do banco.
  */
-type CorDoChip = NonNullable<Materia['chipCor']>
+type CorDoChip = NonNullable<Texto['chipCor']>
+type CategoriaDeMateria = NonNullable<Texto['categoria']>
+type TipoDeGuia = NonNullable<Texto['tipoGuia']>
+type NivelDeGuia = NonNullable<Texto['nivel']>
 type CorNaEscala = Vinho['corNaEscala']
 type FaixaDePreco = NonNullable<Vinho['faixaPreco']>
 type TipoDeVinho = Vinho['tipo']
 type CorpoDeVinho = NonNullable<Vinho['corpo']>
-type TipoDeGuia = Guia['tipoGuia']
-type NivelDeGuia = Guia['nivel']
-type TipoDeEvento = Evento['tipo']
 
 /* -------------------------------------------------------------------------- */
 /* Ambiente                                                                    */
@@ -81,7 +81,7 @@ interface No {
   [chave: string]: unknown
 }
 
-type Rico = Materia['corpo']
+type Rico = Texto['corpo']
 
 const textoSimples = (conteudo: string) => ({
   type: 'text',
@@ -233,21 +233,7 @@ const porSlug = (slug: string): Where => ({ slug: { equals: slug } })
 /* Limpeza                                                                     */
 /* -------------------------------------------------------------------------- */
 
-// Conteúdo primeiro, taxonomia depois: as tabelas de relação apagam em cascata, mas
-// deixar os documentos que apontam para elas irem embora antes evita qualquer surpresa.
-const COLECOES_SEMEADAS: CollectionSlug[] = [
-  'materias',
-  'edicoes',
-  'vinhos',
-  'guias',
-  'eventos',
-  'categorias',
-  'tags',
-  'uvas',
-  'regioes',
-  'importadoras',
-  'autores',
-]
+const COLECOES_SEMEADAS: CollectionSlug[] = ['textos', 'vinhos']
 
 async function limparConteudo(): Promise<void> {
   secao('Esvaziando as coleções de conteúdo (usuários e mídia ficam intactos)')
@@ -262,56 +248,10 @@ async function limparConteudo(): Promise<void> {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 1. Autoria e acesso                                                         */
+/* 1. Acesso ao painel                                                         */
 /* -------------------------------------------------------------------------- */
 
-async function semearAutora(): Promise<number> {
-  secao('Autoria')
-
-  const id = await semear(
-    'autores',
-    porSlug('ana-luiza-leal'),
-    {
-      nome: 'Ana Luiza Leal',
-      slug: 'ana-luiza-leal',
-      cargo: 'Jornalista de vinho e criadora da Tanin',
-      bioCurta:
-        'Jornalista há dezoito anos, escreve sobre vinho desde 2015. Criou a Tanin para contar o que acontece dentro da garrafa sem o vocabulário que afasta quem só queria beber melhor.',
-      bioLonga: rico(
-        p(
-          'Comecei a escrever sobre vinho por um desvio. Cobria alimentação e restaurantes quando percebi que a parte do texto que os leitores recortavam e mandavam para as amigas era sempre a mesma: a que explicava por que aquela garrafa custava aquilo e o que esperar de sabor ao abri-la. Nunca a que descrevia taninos aveludados.',
-        ),
-        p(
-          'A Tanin nasceu desse recorte. É uma publicação independente, sem patrocínio de importadora e sem link de afiliado, escrita para quem compra vinho com regularidade e quer decidir melhor — não para quem trabalha com vinho. Aqui não existe nota sem justificativa, elogio sem prova, nem palavra técnica que não seja explicada na frase seguinte.',
-        ),
-        p(
-          'Provo os vinhos que avalio, quase sempre às cegas e em série, ao lado de garrafas comparáveis de preço parecido. Quando uma amostra chega de graça, isso é dito na ficha. Quando eu erro, a ficha é corrigida e a correção fica visível. É um método simples e é o que sustenta a única coisa que uma publicação sobre vinho tem para vender: a confiança de quem lê.',
-        ),
-        p(
-          'Escrevo de São Paulo, viajo para vindimas quando a pauta pede e leio rótulos em supermercado por esporte. Se você chegou até aqui, provavelmente também.',
-        ),
-      ),
-      credenciais: [
-        { texto: 'Graduação em Jornalismo, com especialização em jornalismo de gastronomia', ano: '2007' },
-        { texto: 'WSET Nível 2 em Vinhos, com distinção', ano: '2018' },
-        { texto: 'Curso de sommelier profissional, módulos de degustação e serviço', ano: '2016' },
-        { texto: 'Dez anos de cobertura de vinho em redações e em publicação própria', ano: '2015–2025' },
-        { texto: 'Cobertura de vindima em Portugal, Argentina e Chile', ano: '2019–2024' },
-      ],
-      redes: [
-        { rede: 'instagram', url: 'https://instagram.com/analuizaleal' },
-        { rede: 'linkedin', url: 'https://www.linkedin.com/in/analuizaleal' },
-        { rede: 'youtube', url: 'https://www.youtube.com/@analuizaleal' },
-      ],
-      email: 'ana@tanin.com.br',
-    },
-    'Ana Luiza Leal',
-  )
-
-  return id
-}
-
-async function semearUsuario(idDaAutora: number): Promise<void> {
+async function semearUsuario(): Promise<void> {
   secao('Acesso ao painel')
 
   const existentes = await payload.find({
@@ -323,26 +263,8 @@ async function semearUsuario(idDaAutora: number): Promise<void> {
 
   // Usuário existente não é reescrito: trocar a senha de quem já usa o painel a cada
   // execução do seed seria uma surpresa desagradável.
-  //
-  // A ficha de autor é a única exceção, e por um motivo concreto: a chave estrangeira
-  // de `usuarios.autor` é ON DELETE SET NULL, então `--limpar` apaga a autora e zera o
-  // vínculo em silêncio. Sem religar aqui, todo login sobrevive ao seed sem a ficha que
-  // assina o conteúdo — e o campo aparece vazio no painel sem que nada tenha avisado.
-  const existente = existentes.docs[0]
-  if (existente) {
-    const vinculo = existente.autor
-    const idAtual = typeof vinculo === 'object' && vinculo ? vinculo.id : vinculo
-    if (idAtual !== idDaAutora) {
-      await payload.update({
-        collection: 'usuarios',
-        id: existente.id,
-        data: { autor: idDaAutora },
-        depth: 0,
-      })
-      console.log('  = ana@tanin.com.br (mantido; ficha de autor religada)')
-    } else {
-      console.log('  = ana@tanin.com.br (já existia, mantido)')
-    }
+  if (existentes.docs[0]) {
+    console.log('  = ana@tanin.com.br (já existia, mantido)')
     contar('usuarios', 'mantido')
     return
   }
@@ -354,7 +276,6 @@ async function semearUsuario(idDaAutora: number): Promise<void> {
       password: 'tanin2026',
       nome: 'Ana Luiza Leal',
       papel: 'administrador',
-      autor: idDaAutora,
     },
   })
   contar('usuarios', 'criado')
@@ -362,340 +283,59 @@ async function semearUsuario(idDaAutora: number): Promise<void> {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 2. Taxonomia                                                                */
+/* 2. Nomes de apoio                                                           */
 /* -------------------------------------------------------------------------- */
-
-const CATEGORIAS = [
-  {
-    slug: 'reportagem',
-    nome: 'Reportagem',
-    ordem: 10,
-    chipCor: 'granada',
-    descricao: 'Apuração de campo: o que está acontecendo nas vinícolas, nas importadoras e na prateleira.',
-  },
-  {
-    slug: 'ensaio',
-    nome: 'Ensaio',
-    ordem: 20,
-    chipCor: 'ambar',
-    descricao: 'Texto de opinião assinada, com tese explícita e argumento que se pode discordar.',
-  },
-  {
-    slug: 'entrevista',
-    nome: 'Entrevista',
-    ordem: 30,
-    chipCor: 'cereja',
-    descricao: 'Conversas com quem produz, importa, serve e estuda vinho no Brasil.',
-  },
-  {
-    slug: 'degustacao',
-    nome: 'Degustação',
-    ordem: 40,
-    chipCor: 'purpura',
-    descricao: 'Provas comparativas, quase sempre às cegas, com método descrito e resultado publicado por inteiro.',
-  },
-  {
-    slug: 'mercado',
-    nome: 'Mercado',
-    ordem: 50,
-    chipCor: 'ouro-velho',
-    descricao: 'Preço, imposto, câmbio e distribuição — a parte do vinho que decide o que chega até você.',
-  },
-  {
-    slug: 'cultura',
-    nome: 'Cultura',
-    ordem: 60,
-    chipCor: 'salmao',
-    descricao: 'O vinho como hábito: a mesa, a casa, o restaurante e o que ele diz sobre quem bebe.',
-  },
-] as const
-
-const TAGS = [
-  'Champagne',
-  'Vinho natural',
-  'Portugal',
-  'Chile',
-  'Argentina',
-  'Harmonização',
-  'Espumante',
-  'Uva rara',
-  'Preço justo',
-  'Rótulo brasileiro',
-  'Vinho de guarda',
-  'Restaurante',
-] as const
-
-const UVAS = [
-  {
-    slug: 'touriga-nacional',
-    nome: 'Touriga Nacional',
-    cor: 'tinta',
-    descricao:
-      'A casta mais reconhecível de Portugal: flor de violeta, fruta escura e taninos firmes. Sustenta tanto o Porto quanto os tintos secos do Douro, e ganhou fôlego próprio quando os produtores pararam de usá-la só como tempero de corte.',
-  },
-  {
-    slug: 'tempranillo',
-    nome: 'Tempranillo',
-    cor: 'tinta',
-    sinonimos: 'Tinta Roriz, Aragonez, Tinto Fino, Cencibel',
-    descricao:
-      'Amadurece cedo, tem acidez média e aceita madeira com naturalidade. É a espinha dorsal da Rioja e um dos pilares do Douro, onde atende por Tinta Roriz.',
-  },
-  {
-    slug: 'malbec',
-    nome: 'Malbec',
-    cor: 'tinta',
-    sinonimos: 'Côt, Auxerrois',
-    descricao:
-      'Saiu de Cahors, no sudoeste francês, e virou identidade argentina em Mendoza. Dá vinhos de cor densa, fruta madura e tanino macio — o que explica boa parte da sua popularidade no Brasil.',
-  },
-  {
-    slug: 'cabernet-sauvignon',
-    nome: 'Cabernet Sauvignon',
-    cor: 'tinta',
-    descricao:
-      'Casca grossa, tanino estruturado e aroma de cassis com um traço herbáceo. Envelhece bem e é a uva mais plantada do mundo, o que significa qualidade em toda a escala de preço.',
-  },
-  {
-    slug: 'merlot',
-    nome: 'Merlot',
-    cor: 'tinta',
-    descricao:
-      'Fruta redonda, tanino baixo e álcool moderado quando colhida no ponto. Injustiçada por duas décadas de rótulos industriais, é o tinto que melhor resolve uma mesa com pratos diferentes.',
-  },
-  {
-    slug: 'pinot-noir',
-    nome: 'Pinot Noir',
-    cor: 'tinta',
-    descricao:
-      'Cor clara, acidez alta e aroma de cereja e terra. Exige clima fresco e mão leve na vinificação — por isso é cara, e por isso quase não existe versão barata que preste.',
-  },
-  {
-    slug: 'sangiovese',
-    nome: 'Sangiovese',
-    cor: 'tinta',
-    sinonimos: 'Brunello, Prugnolo Gentile, Morellino',
-    descricao:
-      'A uva da Toscana: acidez alta, tanino seco e sabor de cereja azeda com ervas. Foi desenhada pela mesa italiana e continua sendo o tinto que melhor acompanha tomate.',
-  },
-  {
-    slug: 'nebbiolo',
-    nome: 'Nebbiolo',
-    cor: 'tinta',
-    sinonimos: 'Spanna, Chiavennasca',
-    descricao:
-      'Cor pálida que engana: por baixo há tanino severo e acidez alta, que pedem anos de garrafa. É a casta do Barolo e do Barbaresco, e uma das poucas que melhora de verdade com o tempo.',
-  },
-  {
-    slug: 'syrah',
-    nome: 'Syrah',
-    cor: 'tinta',
-    sinonimos: 'Shiraz',
-    descricao:
-      'No Rhône dá vinhos apimentados e de fruta escura; na Austrália, mais doces e encorpados. O nome no rótulo costuma anunciar qual dos dois estilos está na garrafa.',
-  },
-  {
-    slug: 'garnacha',
-    nome: 'Garnacha',
-    cor: 'tinta',
-    sinonimos: 'Grenache, Cannonau, Garnacha Tinta',
-    descricao:
-      'Pele fina, cor clara e fruta vermelha generosa. Resiste ao calor e é a base da maioria dos rosés do sul da França, onde a maceração curta preserva o tom pálido.',
-  },
-  {
-    slug: 'chardonnay',
-    nome: 'Chardonnay',
-    cor: 'branca',
-    descricao:
-      'Uva neutra que assume o sotaque do lugar e da barrica. Vai do branco tenso e mineral de Chablis ao amanteigado da Califórnia — e é metade da alma da Champagne.',
-  },
-  {
-    slug: 'sauvignon-blanc',
-    nome: 'Sauvignon Blanc',
-    cor: 'branca',
-    descricao:
-      'Acidez cortante e aroma inconfundível de erva, maracujá e limão. Feita para beber jovem, é o branco que mais funciona com queijo de cabra e com comida de sal alto.',
-  },
-  {
-    slug: 'riesling',
-    nome: 'Riesling',
-    cor: 'branca',
-    descricao:
-      'Aromática, de acidez altíssima e álcool baixo, existe do seco absoluto ao doce de sobremesa. Envelhece melhor do que a maioria dos tintos, o que quase ninguém acredita na primeira vez.',
-  },
-  {
-    slug: 'albarino',
-    nome: 'Albariño',
-    cor: 'branca',
-    sinonimos: 'Alvarinho',
-    descricao:
-      'O branco do Atlântico ibérico: salino, cítrico e de corpo médio. Cruza a fronteira e vira Alvarinho no Vinho Verde português, com o mesmo talento para peixe.',
-  },
-  {
-    slug: 'ribolla-gialla',
-    nome: 'Ribolla Gialla',
-    cor: 'branca',
-    descricao:
-      'Casta branca do nordeste italiano, de casca espessa e pouco aroma primário. Virou emblema do vinho laranja porque suporta semanas de contato com as cascas sem perder frescor.',
-  },
-] as const
-
-const REGIOES = [
-  {
-    slug: 'douro',
-    nome: 'Douro',
-    pais: 'Portugal',
-    descricao:
-      'Vale de encostas íngremes no norte de Portugal, o primeiro território vinícola demarcado do mundo. Fez fama com o Porto e hoje tira dos mesmos vinhedos velhos tintos secos de estrutura séria.',
-  },
-  {
-    slug: 'mendoza',
-    nome: 'Mendoza',
-    pais: 'Argentina',
-    descricao:
-      'Deserto irrigado ao pé dos Andes, entre 800 e 1.500 metros de altitude. A amplitude térmica preserva acidez em uvas que amadurecem sob sol constante — a razão técnica por trás do Malbec argentino.',
-  },
-  {
-    slug: 'vale-de-colchagua',
-    nome: 'Vale de Colchagua',
-    pais: 'Chile',
-    descricao:
-      'Vale chileno de clima quente e seco, especializado em tintos de corpo cheio. É de onde vem boa parte do Cabernet Sauvignon e do Carménère que chegam ao supermercado brasileiro.',
-  },
-  {
-    slug: 'borgonha',
-    nome: 'Borgonha',
-    pais: 'França',
-    descricao:
-      'Faixa estreita de vinhedos no leste francês onde Pinot Noir e Chardonnay são cultivadas há mais de mil anos. O preço acompanha a escassez: são poucos hectares para demanda mundial.',
-  },
-  {
-    slug: 'champagne',
-    nome: 'Champagne',
-    pais: 'França',
-    descricao:
-      'Região fria a nordeste de Paris, única autorizada a usar o nome no rótulo. O frio dá a acidez que sustenta a segunda fermentação na garrafa e o longo repouso sobre as leveduras.',
-  },
-  {
-    slug: 'vale-do-loire',
-    nome: 'Vale do Loire',
-    pais: 'França',
-    descricao:
-      'O rio mais longo da França atravessa vinhedos de brancos tensos e tintos leves. Sancerre e Pouilly-Fumé, no leste do vale, são a referência mundial de Sauvignon Blanc.',
-  },
-  {
-    slug: 'toscana',
-    nome: 'Toscana',
-    pais: 'Itália',
-    descricao:
-      'Colinas do centro da Itália onde a Sangiovese domina. Chianti Classico, Brunello e Vino Nobile saem da mesma casta, com regras diferentes de tempo e de solo.',
-  },
-  {
-    slug: 'piemonte',
-    nome: 'Piemonte',
-    pais: 'Itália',
-    descricao:
-      'No noroeste italiano, ao pé dos Alpes, é a casa da Nebbiolo. Barolo e Barbaresco são vinhos de guarda longa; Langhe Nebbiolo é a porta de entrada mais honesta para o estilo.',
-  },
-  {
-    slug: 'mosel',
-    nome: 'Mosel',
-    pais: 'Alemanha',
-    descricao:
-      'Vinhedos em encostas de xisto tão íngremes que a colheita é feita à mão. Produz Riesling de álcool baixo, acidez alta e aroma de limão e pedra molhada.',
-  },
-  {
-    slug: 'rias-baixas',
-    nome: 'Rías Baixas',
-    pais: 'Espanha',
-    descricao:
-      'Galícia atlântica, verde e chuvosa, no extremo noroeste espanhol. A Albariño cultivada em parreiras altas dá brancos salinos que nasceram para acompanhar frutos do mar.',
-  },
-  {
-    slug: 'serra-gaucha',
-    nome: 'Serra Gaúcha',
-    pais: 'Brasil',
-    descricao:
-      'Principal região vinícola brasileira, no nordeste do Rio Grande do Sul. Chuva na vindima é o desafio permanente; a altitude e o frio noturno explicam o bom espumante de método tradicional.',
-  },
-  {
-    slug: 'provence',
-    nome: 'Provence',
-    pais: 'França',
-    descricao:
-      'Sul da França, entre o Mediterrâneo e os Alpes. Definiu o estilo de rosé pálido e seco que o mundo inteiro copiou — e cujo preço médio subiu junto com a moda.',
-  },
-] as const
-
-// Importadoras fictícias. O campo `site` fica vazio de propósito: apontar um endereço
-// inventado para um domínio que pode existir de verdade seria colocar uma empresa real
-// dentro de dados de demonstração.
-const IMPORTADORAS = [
-  { slug: 'vinci-importadora', nome: 'Vinci Importadora', cidade: 'São Paulo' },
-  { slug: 'casa-iberica', nome: 'Casa Ibérica Vinhos', cidade: 'São Paulo' },
-  { slug: 'norte-sul-vinhos', nome: 'Norte Sul Vinhos', cidade: 'Rio de Janeiro' },
-  { slug: 'alameda-wine', nome: 'Alameda Wine', cidade: 'Curitiba' },
-  { slug: 'companhia-do-meridiano', nome: 'Companhia do Meridiano', cidade: 'Porto Alegre' },
-  { slug: 'bruma-importadora', nome: 'Bruma Importadora', cidade: 'Belo Horizonte' },
-] as const
 
 type Indice = Record<string, number>
 
-async function semearTaxonomia(): Promise<{
-  categorias: Indice
-  tags: Indice
-  uvas: Indice
-  regioes: Indice
-  importadoras: Indice
-}> {
-  const categorias: Indice = {}
-  const tags: Indice = {}
-  const uvas: Indice = {}
-  const regioes: Indice = {}
-  const importadoras: Indice = {}
+/**
+ * Uva, região e importadora são texto simples na ficha de vinho — não há mais
+ * coleções de taxonomia. As sementes de vinho continuam referindo por chave curta,
+ * e estes mapas traduzem a chave para o nome como ele deve aparecer na página.
+ */
+const UVAS: Record<string, string> = {
+  'touriga-nacional': 'Touriga Nacional',
+  tempranillo: 'Tempranillo',
+  malbec: 'Malbec',
+  'cabernet-sauvignon': 'Cabernet Sauvignon',
+  merlot: 'Merlot',
+  'pinot-noir': 'Pinot Noir',
+  sangiovese: 'Sangiovese',
+  nebbiolo: 'Nebbiolo',
+  syrah: 'Syrah',
+  garnacha: 'Garnacha',
+  chardonnay: 'Chardonnay',
+  'sauvignon-blanc': 'Sauvignon Blanc',
+  riesling: 'Riesling',
+  albarino: 'Albariño',
+  'ribolla-gialla': 'Ribolla Gialla',
+}
 
-  secao('Categorias')
-  for (const categoria of CATEGORIAS) {
-    categorias[categoria.slug] = await semear(
-      'categorias',
-      porSlug(categoria.slug),
-      { ...categoria },
-      categoria.nome,
-    )
-  }
+const REGIOES: Record<string, string> = {
+  douro: 'Douro',
+  mendoza: 'Mendoza',
+  'vale-de-colchagua': 'Vale de Colchagua',
+  borgonha: 'Borgonha',
+  champagne: 'Champagne',
+  'vale-do-loire': 'Vale do Loire',
+  toscana: 'Toscana',
+  piemonte: 'Piemonte',
+  mosel: 'Mosel',
+  'rias-baixas': 'Rías Baixas',
+  'serra-gaucha': 'Serra Gaúcha',
+  provence: 'Provence',
+}
 
-  secao('Tags')
-  for (const nome of TAGS) {
-    const slug = paraSlug(nome)
-    tags[slug] = await semear('tags', porSlug(slug), { nome, slug }, nome)
-  }
-
-  secao('Uvas')
-  for (const uva of UVAS) {
-    uvas[uva.slug] = await semear('uvas', porSlug(uva.slug), { ...uva }, uva.nome)
-  }
-
-  secao('Regiões')
-  for (const regiao of REGIOES) {
-    regioes[regiao.slug] = await semear(
-      'regioes',
-      porSlug(regiao.slug),
-      { ...regiao },
-      `${regiao.nome} · ${regiao.pais}`,
-    )
-  }
-
-  secao('Importadoras')
-  for (const importadora of IMPORTADORAS) {
-    importadoras[importadora.slug] = await semear(
-      'importadoras',
-      porSlug(importadora.slug),
-      { ...importadora },
-      importadora.nome,
-    )
-  }
-
-  return { categorias, tags, uvas, regioes, importadoras }
+// Importadoras fictícias, sem site de propósito: apontar um endereço inventado para
+// um domínio que pode existir de verdade seria colocar uma empresa real no meio de
+// dados de demonstração.
+const IMPORTADORAS: Record<string, string> = {
+  'vinci-importadora': 'Vinci Importadora',
+  'casa-iberica': 'Casa Ibérica Vinhos',
+  'norte-sul-vinhos': 'Norte Sul Vinhos',
+  'alameda-wine': 'Alameda Wine',
+  'companhia-do-meridiano': 'Companhia do Meridiano',
+  'bruma-importadora': 'Bruma Importadora',
 }
 
 /* -------------------------------------------------------------------------- */
@@ -710,7 +350,6 @@ interface SementeDeGuia {
   tipoGuia: TipoDeGuia
   nivel: NivelDeGuia
   chipCor: CorDoChip
-  tags: string[]
   paraLevar: string[]
   faq: { pergunta: string; resposta: string }[]
   corpo: No[]
@@ -728,7 +367,6 @@ const GUIAS: SementeDeGuia[] = [
     tipoGuia: 'compra',
     nivel: 'iniciante',
     chipCor: 'ouro-velho',
-    tags: ['preco-justo', 'portugal'],
     paraLevar: [
       'A origem no rótulo é a informação mais confiável: quanto menor o território citado, mais rígidas as regras de produção.',
       'Rótulo europeu costuma dizer o lugar; rótulo do Novo Mundo costuma dizer a uva. Nenhum dos dois é mais honesto que o outro.',
@@ -802,7 +440,6 @@ const GUIAS: SementeDeGuia[] = [
     tipoGuia: 'uva',
     nivel: 'iniciante',
     chipCor: 'purpura',
-    tags: ['argentina', 'preco-justo'],
     paraLevar: [
       'Malbec argentino de qualidade vem de altitude: acima de mil metros, a noite fria preserva acidez que o sol do dia gastaria.',
       'A diferença entre um Malbec de entrada e um de gama alta está mais na acidez e no tanino do que na intensidade da fruta.',
@@ -874,7 +511,6 @@ const GUIAS: SementeDeGuia[] = [
     tipoGuia: 'regiao',
     nivel: 'intermediario',
     chipCor: 'granada',
-    tags: ['portugal', 'vinho-de-guarda'],
     paraLevar: [
       'Douro e Porto saem do mesmo lugar e muitas vezes das mesmas vinhas: a diferença está na interrupção da fermentação com aguardente.',
       'Vinhas velhas de campo misto, com dezenas de castas plantadas juntas, dão os tintos mais complexos da região.',
@@ -938,7 +574,6 @@ const GUIAS: SementeDeGuia[] = [
     tipoGuia: 'servico',
     nivel: 'iniciante',
     chipCor: 'cereja',
-    tags: ['harmonizacao', 'espumante'],
     paraLevar: [
       'No Brasil, "temperatura ambiente" significa 25 °C ou mais — quente demais para qualquer tinto.',
       'Vinte minutos na geladeira antes de abrir resolve a maioria dos tintos; vinte minutos fora dela resolve a maioria dos brancos.',
@@ -999,7 +634,6 @@ const GUIAS: SementeDeGuia[] = [
     tipoGuia: 'harmonizacao',
     nivel: 'iniciante',
     chipCor: 'rubi',
-    tags: ['harmonizacao', 'restaurante'],
     paraLevar: [
       'Intensidade acompanha intensidade: prato delicado com vinho delicado, prato marcante com vinho marcante.',
       'Acidez no vinho corta gordura no prato — é o mecanismo mais confiável da harmonização.',
@@ -1065,7 +699,6 @@ const GUIAS: SementeDeGuia[] = [
     tipoGuia: 'tecnico',
     nivel: 'iniciante',
     chipCor: 'ouro',
-    tags: ['espumante', 'champagne', 'rotulo-brasileiro'],
     paraLevar: [
       'Método tradicional: segunda fermentação dentro da garrafa, com anos sobre as leveduras. Dá aroma de pão, brioche e amêndoa.',
       'Método Charmat: segunda fermentação em tanque, engarrafamento rápido. Preserva aroma de fruta e flor.',
@@ -1132,7 +765,6 @@ const GUIAS: SementeDeGuia[] = [
     tipoGuia: 'tecnico',
     nivel: 'intermediario',
     chipCor: 'laranja',
-    tags: ['vinho-natural', 'uva-rara'],
     paraLevar: [
       'Orgânico é certificação de vinhedo: proíbe agroquímicos de síntese e é auditada por terceiros.',
       'Biodinâmico inclui as regras orgânicas e acrescenta preparados e calendário próprios, com certificação privada.',
@@ -1195,7 +827,6 @@ const GUIAS: SementeDeGuia[] = [
     tipoGuia: 'uva',
     nivel: 'intermediario',
     chipCor: 'palha',
-    tags: ['uva-rara', 'harmonizacao'],
     paraLevar: [
       'Riesling existe do seco absoluto ao doce de sobremesa: a palavra "trocken" no rótulo alemão significa seco.',
       'Álcool baixo, entre 8% e 12%, é característica da uva, não sinal de vinho fraco.',
@@ -1250,18 +881,16 @@ const GUIAS: SementeDeGuia[] = [
   },
 ]
 
-async function semearGuias(
-  idDaAutora: number,
-  tags: Indice,
-): Promise<Indice> {
+async function semearGuias(): Promise<Indice> {
   secao('Guias')
   const indice: Indice = {}
 
   for (const guia of GUIAS) {
     indice[guia.slug] = await semear(
-      'guias',
+      'textos',
       porSlug(guia.slug),
       {
+        secao: 'guia',
         titulo: guia.titulo,
         slug: guia.slug,
         subtitulo: guia.subtitulo,
@@ -1271,8 +900,6 @@ async function semearGuias(
         faq: guia.faq,
         tipoGuia: guia.tipoGuia,
         nivel: guia.nivel,
-        autor: idDaAutora,
-        tags: guia.tags.map((slug) => tags[slug]).filter(Boolean),
         chipCor: guia.chipCor,
         dataPublicacao: diasAtras(guia.diasAtras),
         dataAtualizacao: diasAtras(Math.max(2, Math.round(guia.diasAtras / 4))),
@@ -1312,7 +939,6 @@ interface SementeDeVinho {
   decantacao?: string
   faixaPreco: FaixaDePreco
   importadora: string
-  tags: string[]
   guias: string[]
   similares: string[]
   diasAtras: number
@@ -1353,7 +979,6 @@ const VINHOS: SementeDeVinho[] = [
     decantacao: 'Abrir uma hora antes ou decantar por trinta minutos',
     faixaPreco: '150-250',
     importadora: 'casa-iberica',
-    tags: ['portugal', 'vinho-de-guarda'],
     guias: ['douro-alem-do-porto'],
     similares: ['cascina-rovereto-barolo-2019', 'vina-piedra-clara-cabernet-2021'],
     diasAtras: 18,
@@ -1388,7 +1013,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Bordeaux',
     faixaPreco: '80-150',
     importadora: 'vinci-importadora',
-    tags: ['argentina', 'preco-justo'],
     guias: ['malbec-o-que-a-uva-virou'],
     similares: ['vina-piedra-clara-cabernet-2021', 'vinicola-pedra-fria-merlot-2021'],
     diasAtras: 26,
@@ -1425,7 +1049,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Bordeaux',
     faixaPreco: 'ate-80',
     importadora: 'norte-sul-vinhos',
-    tags: ['chile', 'preco-justo'],
     guias: ['como-ler-um-rotulo-de-vinho'],
     similares: ['bodega-alto-ramal-malbec-finca-la-loma-2022'],
     diasAtras: 33,
@@ -1460,7 +1083,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Borgonha',
     faixaPreco: '250-400',
     importadora: 'alameda-wine',
-    tags: ['vinho-de-guarda', 'harmonizacao'],
     guias: ['temperatura-de-servico'],
     similares: ['podere-casanuova-chianti-classico-2021'],
     diasAtras: 41,
@@ -1495,7 +1117,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Universal de bojo médio',
     faixaPreco: '150-250',
     importadora: 'vinci-importadora',
-    tags: ['harmonizacao', 'restaurante'],
     guias: ['harmonizacao-na-pratica'],
     similares: ['domaine-des-trois-fontaines-bourgogne-rouge-2022', 'cascina-rovereto-barolo-2019'],
     diasAtras: 48,
@@ -1531,7 +1152,6 @@ const VINHOS: SementeDeVinho[] = [
     decantacao: 'Decantar por duas horas, ou abrir na véspera',
     faixaPreco: 'acima-700',
     importadora: 'alameda-wine',
-    tags: ['vinho-de-guarda', 'uva-rara'],
     guias: ['temperatura-de-servico'],
     similares: ['quinta-do-vale-escuro-reserva-2021', 'podere-casanuova-chianti-classico-2021'],
     diasAtras: 55,
@@ -1566,7 +1186,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Universal de bojo médio',
     faixaPreco: '80-150',
     importadora: 'companhia-do-meridiano',
-    tags: ['rotulo-brasileiro', 'preco-justo'],
     guias: ['como-ler-um-rotulo-de-vinho'],
     similares: ['bodega-alto-ramal-malbec-finca-la-loma-2022', 'vinicola-alto-da-serra-brut-nature-2021'],
     diasAtras: 12,
@@ -1601,7 +1220,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Branca de bojo médio',
     faixaPreco: '80-150',
     importadora: 'alameda-wine',
-    tags: ['harmonizacao'],
     guias: ['temperatura-de-servico'],
     similares: ['maison-perrichon-champagne-brut-reserve', 'domaine-de-la-roche-grise-sancerre-2023'],
     diasAtras: 60,
@@ -1636,7 +1254,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Branca de bojo estreito',
     faixaPreco: '250-400',
     importadora: 'alameda-wine',
-    tags: ['harmonizacao', 'preco-justo'],
     guias: ['harmonizacao-na-pratica'],
     similares: ['adega-pazo-do-souto-albarino-2023', 'weingut-steinhof-riesling-trocken-2022'],
     diasAtras: 68,
@@ -1671,7 +1288,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Branca de bojo estreito',
     faixaPreco: '150-250',
     importadora: 'bruma-importadora',
-    tags: ['uva-rara', 'harmonizacao'],
     guias: ['riesling-o-branco-mal-compreendido'],
     similares: ['domaine-de-la-roche-grise-sancerre-2023', 'azienda-colle-sasso-ribolla-anfora-2021'],
     diasAtras: 8,
@@ -1706,7 +1322,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Branca de bojo médio',
     faixaPreco: '80-150',
     importadora: 'casa-iberica',
-    tags: ['harmonizacao', 'preco-justo'],
     guias: ['harmonizacao-na-pratica'],
     similares: ['domaine-de-la-roche-grise-sancerre-2023', 'chateau-val-dombre-rose-2023'],
     diasAtras: 74,
@@ -1743,7 +1358,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Branca de bojo médio',
     faixaPreco: '150-250',
     importadora: 'norte-sul-vinhos',
-    tags: ['preco-justo', 'harmonizacao'],
     guias: ['temperatura-de-servico'],
     similares: ['adega-pazo-do-souto-albarino-2023'],
     diasAtras: 81,
@@ -1780,7 +1394,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Branca de bojo alongado, nunca flûte estreita',
     faixaPreco: '400-700',
     importadora: 'vinci-importadora',
-    tags: ['champagne', 'espumante'],
     guias: ['espumante-o-metodo-explica-o-preco'],
     similares: ['vinicola-alto-da-serra-brut-nature-2021', 'maison-bellecourt-macon-villages-2022'],
     diasAtras: 5,
@@ -1818,7 +1431,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Branca de bojo alongado',
     faixaPreco: '80-150',
     importadora: 'companhia-do-meridiano',
-    tags: ['espumante', 'rotulo-brasileiro', 'preco-justo'],
     guias: ['espumante-o-metodo-explica-o-preco'],
     similares: ['maison-perrichon-champagne-brut-reserve', 'vinicola-pedra-fria-merlot-2021'],
     diasAtras: 2,
@@ -1852,7 +1464,6 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Universal de bojo médio',
     faixaPreco: '150-250',
     importadora: 'bruma-importadora',
-    tags: ['vinho-natural', 'uva-rara'],
     guias: ['vinho-natural-organico-biodinamico'],
     similares: ['weingut-steinhof-riesling-trocken-2022'],
     diasAtras: 88,
@@ -1889,23 +1500,13 @@ const VINHOS: SementeDeVinho[] = [
     tacaRecomendada: 'Taça pequena de vinho fortificado',
     faixaPreco: '150-250',
     importadora: 'casa-iberica',
-    tags: ['portugal', 'harmonizacao'],
     guias: ['douro-alem-do-porto'],
     similares: ['quinta-do-vale-escuro-reserva-2021'],
     diasAtras: 95,
   },
 ]
 
-async function semearVinhos(
-  idDaAutora: number,
-  indices: {
-    tags: Indice
-    uvas: Indice
-    regioes: Indice
-    importadoras: Indice
-    guias: Indice
-  },
-): Promise<Indice> {
+async function semearVinhos(guias: Indice): Promise<Indice> {
   secao('Vinhos')
   const indice: Indice = {}
 
@@ -1919,15 +1520,15 @@ async function semearVinhos(
         slug: vinho.slug,
         produtor: vinho.produtor,
         pais: vinho.pais,
-        regiao: vinho.regiao ? indices.regioes[vinho.regiao] : null,
+        regiao: vinho.regiao ? (REGIOES[vinho.regiao] ?? null) : null,
         subRegiao: vinho.subRegiao ?? null,
         safra: vinho.safra ?? null,
         tipo: vinho.tipo,
         corpo: vinho.corpoVinho ?? null,
         teorAlcoolico: vinho.teorAlcoolico,
         corNaEscala: vinho.corNaEscala,
-        uvas: vinho.uvas.map(([slug, percentual]) => ({
-          uva: indices.uvas[slug],
+        uvas: vinho.uvas.map(([chave, percentual]) => ({
+          uva: UVAS[chave] ?? chave,
           percentual,
         })),
         nota: vinho.nota,
@@ -1940,10 +1541,7 @@ async function semearVinhos(
         decantacao: vinho.decantacao ?? null,
         faixaPreco: vinho.faixaPreco,
         dataPreco: publicacao,
-        importadora: indices.importadoras[vinho.importadora],
-        guiasRelacionados: vinho.guias.map((slug) => indices.guias[slug]).filter(Boolean),
-        autor: idDaAutora,
-        tags: vinho.tags.map((slug) => indices.tags[slug]).filter(Boolean),
+        importadora: { nome: IMPORTADORAS[vinho.importadora] ?? vinho.importadora },
         dataPublicacao: publicacao,
         _status: 'published',
       },
@@ -1951,19 +1549,28 @@ async function semearVinhos(
     )
   }
 
-  // Os similares entram numa segunda passagem porque apontam para vinhos que só
-  // existem depois que o laço acima termina.
-  secao('Ligações entre vinhos')
+  // Os relacionados entram numa segunda passagem porque os similares apontam para
+  // vinhos que só existem depois que o laço acima termina.
+  secao('Ligações entre vinhos e guias')
   for (const vinho of VINHOS) {
-    const similares = vinho.similares.map((slug) => indice[slug]).filter(Boolean)
-    if (similares.length === 0) continue
+    const relacionados = [
+      ...vinho.guias
+        .map((slug) => guias[slug])
+        .filter(Boolean)
+        .map((value) => ({ relationTo: 'textos' as const, value })),
+      ...vinho.similares
+        .map((slug) => indice[slug])
+        .filter(Boolean)
+        .map((value) => ({ relationTo: 'vinhos' as const, value })),
+    ]
+    if (relacionados.length === 0) continue
     await payload.update({
       collection: 'vinhos',
       id: indice[vinho.slug],
-      data: { vinhosSimilares: similares },
+      data: { relacionados },
       depth: 0,
     })
-    console.log(`  ↔ ${vinho.nome}: ${similares.length} similares`)
+    console.log(`  ↔ ${vinho.nome}: ${relacionados.length} relacionados`)
   }
 
   return indice
@@ -1978,8 +1585,7 @@ interface SementeDeMateria {
   titulo: string
   subtitulo: string
   resumo: string
-  categoria: string
-  tags: string[]
+  categoria: CategoriaDeMateria
   chipCor: CorDoChip
   diasAtras: number
   destaqueHome?: boolean
@@ -1998,7 +1604,6 @@ const MATERIAS: SementeDeMateria[] = [
     resumo:
       'O vinho brasileiro deixou de se apresentar como versão barata do importado. Espumantes de método tradicional e tintos de altitude firmaram um estilo próprio, de acidez alta e álcool contido. O que ainda separa o país das prateleiras estrangeiras não é qualidade: é escala de produção, custo de insumo e uma carga tributária que ninguém discute em voz alta.',
     categoria: 'reportagem',
-    tags: ['rotulo-brasileiro', 'espumante', 'preco-justo'],
     chipCor: 'purpura',
     diasAtras: 3,
     destaqueHome: true,
@@ -2070,7 +1675,6 @@ const MATERIAS: SementeDeMateria[] = [
     resumo:
       'Uma garrafa que deixa a adega espanhola por sete euros chega ao consumidor brasileiro por cerca de R$ 149. Entre um valor e outro estão frete, seguro, imposto de importação, ICMS, PIS, Cofins, margem do importador, margem do distribuidor e margem do varejo. Este é o caminho completo, com cada etapa nomeada e quantificada.',
     categoria: 'mercado',
-    tags: ['preco-justo', 'portugal'],
     chipCor: 'ouro-velho',
     diasAtras: 10,
     guias: ['como-ler-um-rotulo-de-vinho'],
@@ -2129,7 +1733,6 @@ const MATERIAS: SementeDeMateria[] = [
     resumo:
       'Durante décadas o Chile exportou tinto barato de vales quentes e ficou conhecido no Brasil por isso. Nos últimos quinze anos, o país plantou vinhedos perto do oceano e no extremo sul, buscando frio e acidez. O resultado começa a chegar às prateleiras brasileiras: brancos tensos, Pinot Noir de verdade e tintos com menos peso e mais nervo.',
     categoria: 'reportagem',
-    tags: ['chile', 'preco-justo'],
     chipCor: 'cereja',
     diasAtras: 18,
     vinhos: ['vina-piedra-clara-cabernet-2021'],
@@ -2187,7 +1790,6 @@ const MATERIAS: SementeDeMateria[] = [
     resumo:
       'O vinho natural chegou ao Brasil como bandeira e por algum tempo funcionou assim: quem estava dentro defendia tudo, quem estava fora recusava tudo. Passada a fase da militância, sobrou uma categoria menor, mais competente e mais interessante — e a discussão saiu do rótulo para o único lugar onde ela sempre deveria ter estado, que é a taça.',
     categoria: 'ensaio',
-    tags: ['vinho-natural', 'uva-rara'],
     chipCor: 'laranja',
     diasAtras: 26,
     vinhos: ['azienda-colle-sasso-ribolla-anfora-2021'],
@@ -2247,7 +1849,6 @@ const MATERIAS: SementeDeMateria[] = [
     resumo:
       'Em doze anos montando cartas de vinho em São Paulo, a sommelière Marina Bastos viu a proporção de brancos vendidos por taça sair de um quinto para quase metade. Nesta entrevista, ela explica o papel do clima, do preço e da comida brasileira nessa virada, e por que a resistência ao branco nunca teve a ver com sabor.',
     categoria: 'entrevista',
-    tags: ['restaurante', 'harmonizacao'],
     chipCor: 'ouro',
     diasAtras: 35,
     vinhos: ['weingut-steinhof-riesling-trocken-2022', 'adega-pazo-do-souto-albarino-2023'],
@@ -2306,7 +1907,6 @@ const MATERIAS: SementeDeMateria[] = [
     resumo:
       'Compramos dez tintos de até R$ 100 nas prateleiras de supermercados e lojas de São Paulo, escondemos os rótulos e provamos em duas sessões separadas. O resultado desmonta a ideia de que preço nessa faixa é sinônimo de qualidade: o segundo colocado custava R$ 58 e o mais caro do grupo ficou em sétimo lugar.',
     categoria: 'degustacao',
-    tags: ['preco-justo', 'chile', 'argentina'],
     chipCor: 'rubi',
     diasAtras: 45,
     vinhos: ['vina-piedra-clara-cabernet-2021', 'vinicola-pedra-fria-merlot-2021'],
@@ -2362,7 +1962,6 @@ const MATERIAS: SementeDeMateria[] = [
     resumo:
       'Por uma década, Portugal foi a resposta padrão para quem queria bom vinho por pouco dinheiro no Brasil. Os preços subiram, e o câmbio explica só uma parte. Turismo, reconhecimento internacional, custo de produção em encostas e a valorização do Douro fizeram o resto. Ainda há bons negócios — mas em regiões que quase ninguém pronuncia.',
     categoria: 'mercado',
-    tags: ['portugal', 'preco-justo'],
     chipCor: 'granada',
     diasAtras: 58,
     vinhos: ['quinta-do-vale-escuro-reserva-2021', 'casa-do-corgo-tawny-10-anos'],
@@ -2418,7 +2017,6 @@ const MATERIAS: SementeDeMateria[] = [
     resumo:
       'Servimos o mesmo tinto português em quatro recipientes diferentes, às cegas, para seis provadores. O formato da taça alterou de forma consistente a percepção de aroma e de álcool, mas não a de qualidade. A conclusão prática é mais barata do que a indústria de cristais gostaria: duas taças resolvem uma casa inteira.',
     categoria: 'degustacao',
-    tags: ['harmonizacao', 'portugal'],
     chipCor: 'ambar',
     diasAtras: 70,
     vinhos: ['quinta-do-vale-escuro-reserva-2021'],
@@ -2474,7 +2072,6 @@ const MATERIAS: SementeDeMateria[] = [
     resumo:
       'Durante décadas o vinho foi bebida de ocasião no Brasil: aniversário, Natal, restaurante. Nos últimos anos ele migrou para a semana comum, e essa mudança de lugar alterou tudo — o preço médio de compra, o tipo de garrafa procurada, o tamanho da dose e até a temperatura em que se serve. Um ensaio sobre a domesticação do vinho.',
     categoria: 'cultura',
-    tags: ['restaurante', 'preco-justo'],
     chipCor: 'salmao',
     diasAtras: 85,
     guias: ['harmonizacao-na-pratica'],
@@ -2520,7 +2117,6 @@ const MATERIAS: SementeDeMateria[] = [
     resumo:
       'Notas de vinho parecem objetivas e não são: elas comprimem uma experiência de dezenas de variáveis em um número, e a escala de cem pontos usa, na prática, apenas os vinte últimos. Este ensaio explica como as notas são produzidas, por que a diferença entre 89 e 91 é quase toda comercial e o que ler no lugar delas.',
     categoria: 'ensaio',
-    tags: ['preco-justo', 'vinho-de-guarda'],
     chipCor: 'ambar',
     diasAtras: 100,
     faq: [
@@ -2572,31 +2168,35 @@ const MATERIAS: SementeDeMateria[] = [
   },
 ]
 
-async function semearMaterias(
-  idDaAutora: number,
-  indices: { categorias: Indice; tags: Indice; vinhos: Indice; guias: Indice },
-): Promise<Indice> {
+async function semearMaterias(indices: { vinhos: Indice; guias: Indice }): Promise<Indice> {
   secao('Matérias')
   const indice: Indice = {}
 
   for (const materia of MATERIAS) {
+    const relacionados = [
+      ...(materia.vinhos ?? [])
+        .map((slug) => indices.vinhos[slug])
+        .filter(Boolean)
+        .map((value) => ({ relationTo: 'vinhos' as const, value })),
+      ...(materia.guias ?? [])
+        .map((slug) => indices.guias[slug])
+        .filter(Boolean)
+        .map((value) => ({ relationTo: 'textos' as const, value })),
+    ]
+
     indice[materia.slug] = await semear(
-      'materias',
+      'textos',
       porSlug(materia.slug),
       {
+        secao: 'materia',
         titulo: materia.titulo,
         slug: materia.slug,
         subtitulo: materia.subtitulo,
         resumo: materia.resumo,
         corpo: rico(...materia.corpo),
-        vinhosRelacionados: (materia.vinhos ?? [])
-          .map((slug) => indices.vinhos[slug])
-          .filter(Boolean),
-        guiasRelacionados: (materia.guias ?? []).map((slug) => indices.guias[slug]).filter(Boolean),
+        relacionados,
         faq: materia.faq ?? [],
-        autor: idDaAutora,
-        categoria: indices.categorias[materia.categoria],
-        tags: materia.tags.map((slug) => indices.tags[slug]).filter(Boolean),
+        categoria: materia.categoria,
         chipCor: materia.chipCor,
         dataPublicacao: diasAtras(materia.diasAtras, 8),
         destaqueHome: materia.destaqueHome ?? false,
@@ -3272,8 +2872,10 @@ async function semearEdicoes(): Promise<void> {
   for (const edicao of EDICOES) {
     // A edição mais recente saiu na semana passada; as anteriores recuam uma semana
     // cada, reconstruindo um arquivo de vinte e dois envios.
-    const dataEnvio = diasAtras((EDICOES.length - edicao.numero + 1) * 7, 7)
+    const dataPublicacao = diasAtras((EDICOES.length - edicao.numero + 1) * 7, 7)
 
+    // O índice "Nesta edição" da página nasce dos H2 do corpo — não há mais um
+    // array de blocos em separado, então as seções entram como títulos de verdade.
     const corpoDaEdicao: No[] = [
       p(edicao.abertura),
       ...edicao.secoes.flatMap((trecho) => [h2(trecho.titulo), p(trecho.texto)]),
@@ -3281,23 +2883,17 @@ async function semearEdicoes(): Promise<void> {
     if (edicao.fecho) corpoDaEdicao.push(caixa(edicao.fecho.titulo, edicao.fecho.texto))
 
     await semear(
-      'edicoes',
+      'textos',
       { numero: { equals: edicao.numero } },
       {
+        secao: 'boletim',
         numero: edicao.numero,
         slug: edicao.slug,
         titulo: edicao.titulo,
         subtitulo: edicao.subtitulo ?? null,
         resumo: edicao.resumo,
         corpo: rico(...corpoDaEdicao),
-        // Os blocos espelham as seções do corpo: o índice lateral aponta para trechos
-        // que existem de verdade, em vez de virar uma lista decorativa.
-        // A âncora fica vazia de propósito — o hook do campo a deriva do título.
-        blocos: edicao.secoes.map((trecho) => ({
-          titulo: trecho.titulo,
-          resumo: trecho.resumo,
-        })),
-        dataEnvio,
+        dataPublicacao,
         // `chipCor` vai nulo, e não ausente: ausente faria o valor padrão do campo
         // assumir antes do hook. Com nulo, é a numeração que escolhe a cor, e a fita
         // cromática do arquivo percorre a escala inteira sozinha.
@@ -3310,149 +2906,10 @@ async function semearEdicoes(): Promise<void> {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 7. Agenda                                                                   */
+/* 7. Configurações do site (inclui a ficha da autora)                          */
 /* -------------------------------------------------------------------------- */
 
-interface SementeDeEvento {
-  slug: string
-  nome: string
-  emDias: number
-  hora: number
-  tipo: TipoDeEvento
-  local?: string
-  cidade: string
-  estado?: string
-  endereco?: string
-  descricao: string
-  preco: string
-  organizador: string
-  chipCor: CorDoChip
-}
-
-const EVENTOS: SementeDeEvento[] = [
-  {
-    slug: 'brancos-que-envelhecem-sao-paulo',
-    nome: 'Brancos que envelhecem: seis rótulos, seis safras',
-    emDias: 12,
-    hora: 19,
-    tipo: 'degustacao',
-    local: 'Casa Tanin',
-    cidade: 'São Paulo',
-    estado: 'SP',
-    endereco: 'Rua dos Pinheiros, região de Pinheiros',
-    descricao:
-      'Prova comparativa de seis brancos da mesma casta em seis safras diferentes, de 2015 a 2023, para acompanhar o que o tempo faz com acidez, aroma e textura. Vinte lugares, prova conduzida e ficha de degustação em papel. Indicado para quem já bebe vinho com regularidade e nunca provou um branco com dez anos de garrafa.',
-    preco: 'R$ 220',
-    organizador: 'Tanin',
-    chipCor: 'ouro-velho',
-  },
-  {
-    slug: 'feira-do-vinho-independente-porto-alegre',
-    nome: 'Feira do Vinho Independente',
-    emDias: 20,
-    hora: 14,
-    tipo: 'feira',
-    local: 'Pavilhão da Redenção',
-    cidade: 'Porto Alegre',
-    estado: 'RS',
-    descricao:
-      'Encontro de pequenos produtores e importadoras independentes, com trinta expositores e degustação livre mediante taça de entrada. É a melhor oportunidade do ano para provar rótulos de produção pequena que não chegam ao varejo tradicional e conversar diretamente com quem faz o vinho.',
-    preco: 'R$ 90 com taça inclusa',
-    organizador: 'Associação de Produtores Independentes',
-    chipCor: 'purpura',
-  },
-  {
-    slug: 'jantar-douro-em-cinco-tempos-rio',
-    nome: 'Jantar harmonizado: o Douro em cinco tempos',
-    emDias: 33,
-    hora: 20,
-    tipo: 'jantar',
-    local: 'Restaurante Casa das Encostas',
-    cidade: 'Rio de Janeiro',
-    estado: 'RJ',
-    descricao:
-      'Cinco pratos e cinco vinhos do Douro, de um branco de altitude ao Tawny de dez anos, com apresentação de cada garrafa antes do serviço. Trinta lugares em mesas comunitárias. O menu completo e as fichas dos vinhos são enviados por e-mail a quem se inscreve.',
-    preco: 'R$ 480',
-    organizador: 'Casa das Encostas',
-    chipCor: 'granada',
-  },
-  {
-    slug: 'curso-como-provar-vinho-bh',
-    nome: 'Curso introdutório: como provar vinho',
-    emDias: 47,
-    hora: 10,
-    tipo: 'curso',
-    local: 'Centro Cultural da Savassi',
-    cidade: 'Belo Horizonte',
-    estado: 'MG',
-    descricao:
-      'Aula de quatro horas sobre o método de degustação, sem jargão e sem exigência de conhecimento prévio. Doze vinhos servidos em comparações diretas para treinar a percepção de acidez, tanino, açúcar e álcool. Material impresso incluso e turma limitada a vinte e quatro pessoas.',
-    preco: 'R$ 340',
-    organizador: 'Escola Livre do Gosto',
-    chipCor: 'cereja',
-  },
-  {
-    slug: 'lancamento-safra-2024-bento-goncalves',
-    nome: 'Lançamento das safras 2024 da Serra Gaúcha',
-    emDias: 61,
-    hora: 11,
-    tipo: 'lancamento',
-    local: 'Centro de Eventos do Vale',
-    cidade: 'Bento Gonçalves',
-    estado: 'RS',
-    descricao:
-      'Apresentação conjunta das safras 2024 de doze vinícolas da Serra Gaúcha, com prova aberta ao público na parte da tarde. É a primeira oportunidade de provar os espumantes e brancos do ano antes de eles chegarem ao varejo, e de comparar rótulos vizinhos lado a lado.',
-    preco: 'Gratuito, com inscrição prévia',
-    organizador: 'Consórcio de Vinícolas da Serra',
-    chipCor: 'palha',
-  },
-  {
-    slug: 'aula-aberta-espumantes-online',
-    nome: 'Aula aberta: espumantes de método tradicional',
-    emDias: 80,
-    hora: 20,
-    tipo: 'online',
-    cidade: 'Online',
-    descricao:
-      'Encontro de noventa minutos, transmitido ao vivo, sobre como a segunda fermentação na garrafa muda aroma, textura e preço. Inclui roteiro de compra com rótulos nacionais e importados em três faixas de preço. A gravação fica disponível por trinta dias para quem se inscreve.',
-    preco: 'Gratuito',
-    organizador: 'Tanin',
-    chipCor: 'ouro',
-  },
-]
-
-async function semearEventos(): Promise<void> {
-  secao('Agenda')
-
-  for (const evento of EVENTOS) {
-    await semear(
-      'eventos',
-      porSlug(evento.slug),
-      {
-        nome: evento.nome,
-        slug: evento.slug,
-        data: emDias(evento.emDias, evento.hora),
-        local: evento.local ?? null,
-        cidade: evento.cidade,
-        estado: evento.estado ?? null,
-        endereco: evento.endereco ?? null,
-        tipo: evento.tipo,
-        descricao: evento.descricao,
-        preco: evento.preco,
-        organizador: evento.organizador,
-        chipCor: evento.chipCor,
-        _status: 'published',
-      },
-      `${evento.nome} · ${evento.cidade}`,
-    )
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-/* 8. Configurações do site                                                    */
-/* -------------------------------------------------------------------------- */
-
-async function semearConfiguracoes(idDaAutora: number): Promise<void> {
+async function semearConfiguracoes(): Promise<void> {
   secao('Configurações do site')
 
   await payload.updateGlobal({
@@ -3463,7 +2920,40 @@ async function semearConfiguracoes(idDaAutora: number): Promise<void> {
       assinatura: 'Vinho com vagar',
       descricao:
         'A Tanin é uma publicação independente sobre vinho, escrita por Ana Luiza Leal para quem bebe — e não para quem vende.',
-      autoraPrincipal: idDaAutora,
+      // A autora mora aqui: autora única é configuração do site, não conteúdo.
+      autora: {
+        nome: 'Ana Luiza Leal',
+        cargo: 'Jornalista de vinho e criadora da Tanin',
+        bioCurta:
+          'Jornalista há dezoito anos, escreve sobre vinho desde 2015. Criou a Tanin para contar o que acontece dentro da garrafa sem o vocabulário que afasta quem só queria beber melhor.',
+        bioLonga: rico(
+          p(
+            'Comecei a escrever sobre vinho por um desvio. Cobria alimentação e restaurantes quando percebi que a parte do texto que os leitores recortavam e mandavam para as amigas era sempre a mesma: a que explicava por que aquela garrafa custava aquilo e o que esperar de sabor ao abri-la. Nunca a que descrevia taninos aveludados.',
+          ),
+          p(
+            'A Tanin nasceu desse recorte. É uma publicação independente, sem patrocínio de importadora e sem link de afiliado, escrita para quem compra vinho com regularidade e quer decidir melhor — não para quem trabalha com vinho. Aqui não existe nota sem justificativa, elogio sem prova, nem palavra técnica que não seja explicada na frase seguinte.',
+          ),
+          p(
+            'Provo os vinhos que avalio, quase sempre às cegas e em série, ao lado de garrafas comparáveis de preço parecido. Quando uma amostra chega de graça, isso é dito na ficha. Quando eu erro, a ficha é corrigida e a correção fica visível. É um método simples e é o que sustenta a única coisa que uma publicação sobre vinho tem para vender: a confiança de quem lê.',
+          ),
+          p(
+            'Escrevo de São Paulo, viajo para vindimas quando a pauta pede e leio rótulos em supermercado por esporte. Se você chegou até aqui, provavelmente também.',
+          ),
+        ),
+        credenciais: [
+          { texto: 'Graduação em Jornalismo, com especialização em jornalismo de gastronomia', ano: '2007' },
+          { texto: 'WSET Nível 2 em Vinhos, com distinção', ano: '2018' },
+          { texto: 'Curso de sommelier profissional, módulos de degustação e serviço', ano: '2016' },
+          { texto: 'Dez anos de cobertura de vinho em redações e em publicação própria', ano: '2015–2025' },
+          { texto: 'Cobertura de vindima em Portugal, Argentina e Chile', ano: '2019–2024' },
+        ],
+        redes: [
+          { rede: 'instagram', url: 'https://instagram.com/analuizaleal' },
+          { rede: 'linkedin', url: 'https://www.linkedin.com/in/analuizaleal' },
+          { rede: 'youtube', url: 'https://www.youtube.com/@analuizaleal' },
+        ],
+        email: 'ana@tanin.com.br',
+      },
       boletimTitulo: 'Boletim Tanin',
       boletimChamada:
         'Toda semana, uma carta sobre vinho — o que vale a pena abrir, o que não vale o preço e o que ninguém está contando.',
@@ -3473,7 +2963,6 @@ async function semearConfiguracoes(idDaAutora: number): Promise<void> {
         { rotulo: 'Boletim', endereco: '/boletim' },
         { rotulo: 'Vinhos', endereco: '/vinhos' },
         { rotulo: 'Guias', endereco: '/guias' },
-        { rotulo: 'Agenda', endereco: '/agenda' },
       ],
       rodapeTexto:
         'A Tanin não recebe patrocínio de importadora, não publica conteúdo pago disfarçado de matéria e não usa link de afiliado. Quando uma garrafa chega como amostra, isso é dito na ficha. É o que sustenta a única coisa que temos para oferecer: a confiança de quem lê.',
@@ -3486,7 +2975,7 @@ async function semearConfiguracoes(idDaAutora: number): Promise<void> {
     },
   })
 
-  console.log('  ~ global “configuracoes” atualizado')
+  console.log('  ~ global “configuracoes” atualizado (com a ficha da autora)')
 }
 
 /* -------------------------------------------------------------------------- */
@@ -3507,22 +2996,13 @@ async function principal(): Promise<void> {
 
   if (APAGAR_ANTES) await limparConteudo()
 
-  const idDaAutora = await semearAutora()
-  await semearUsuario(idDaAutora)
+  await semearUsuario()
 
-  const taxonomia = await semearTaxonomia()
-  const guias = await semearGuias(idDaAutora, taxonomia.tags)
-  const vinhos = await semearVinhos(idDaAutora, { ...taxonomia, guias })
-  await semearMaterias(idDaAutora, {
-    categorias: taxonomia.categorias,
-    tags: taxonomia.tags,
-    vinhos,
-    guias,
-  })
+  const guias = await semearGuias()
+  const vinhos = await semearVinhos(guias)
+  await semearMaterias({ vinhos, guias })
   await semearEdicoes()
-  await semearEventos()
-  await ligarTaxonomiaAosGuias(taxonomia, guias)
-  await semearConfiguracoes(idDaAutora)
+  await semearConfiguracoes()
 
   secao('Resumo desta execução')
   for (const [colecao, desfechos] of placar) {
@@ -3538,45 +3018,6 @@ async function principal(): Promise<void> {
 
   const segundos = ((Date.now() - inicio) / 1000).toFixed(1)
   console.log(`\n✓ Portal semeado em ${segundos}s. Painel em /admin, entrada ana@tanin.com.br.\n`)
-}
-
-/**
- * Liga as uvas e as regiões que têm guia dedicado.
- *
- * Fica no fim porque os guias precisam existir antes, e os dois lados da ligação são
- * escritos por coleções diferentes.
- */
-async function ligarTaxonomiaAosGuias(
-  taxonomia: { uvas: Indice; regioes: Indice },
-  guias: Indice,
-): Promise<void> {
-  secao('Guias ligados à taxonomia')
-
-  const ligacoes: { colecao: 'uvas' | 'regioes'; item: string; guia: string }[] = [
-    { colecao: 'uvas', item: 'malbec', guia: 'malbec-o-que-a-uva-virou' },
-    { colecao: 'uvas', item: 'riesling', guia: 'riesling-o-branco-mal-compreendido' },
-    { colecao: 'uvas', item: 'ribolla-gialla', guia: 'vinho-natural-organico-biodinamico' },
-    { colecao: 'regioes', item: 'douro', guia: 'douro-alem-do-porto' },
-    { colecao: 'regioes', item: 'mendoza', guia: 'malbec-o-que-a-uva-virou' },
-    { colecao: 'regioes', item: 'champagne', guia: 'espumante-o-metodo-explica-o-preco' },
-    { colecao: 'regioes', item: 'serra-gaucha', guia: 'espumante-o-metodo-explica-o-preco' },
-    { colecao: 'regioes', item: 'mosel', guia: 'riesling-o-branco-mal-compreendido' },
-  ]
-
-  for (const ligacao of ligacoes) {
-    const indice = ligacao.colecao === 'uvas' ? taxonomia.uvas : taxonomia.regioes
-    const id = indice[ligacao.item]
-    const idDoGuia = guias[ligacao.guia]
-    if (!id || !idDoGuia) continue
-
-    await payload.update({
-      collection: ligacao.colecao,
-      id,
-      data: { guia: idDoGuia },
-      depth: 0,
-    })
-    console.log(`  → ${ligacao.item} aponta para “${ligacao.guia}”`)
-  }
 }
 
 await principal()

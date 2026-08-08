@@ -5,7 +5,7 @@ import { CampoDeBusca } from '@/components/CampoDeBusca'
 import { Chip } from '@/components/Chip'
 import { Migalhas } from '@/components/Migalhas'
 import { TituloDeSecao } from '@/components/Secao'
-import { buscar, listarGuias, type ResultadoDeBusca } from '@/lib/consultas'
+import { buscar, listarTextos, type ResultadoDeBusca } from '@/lib/consultas'
 import { dataPorExtenso, iso, plural } from '@/lib/formatar'
 import { umParametro, type ParametrosDeBusca } from '@/lib/payload'
 import { URL_SITE } from '@/lib/site'
@@ -20,7 +20,7 @@ const GRUPOS: { tipo: ResultadoDeBusca['tipo']; titulo: string }[] = [
   { tipo: 'materia', titulo: 'Matérias' },
   { tipo: 'guia', titulo: 'Guias' },
   { tipo: 'vinho', titulo: 'Fichas de vinho' },
-  { tipo: 'edicao', titulo: 'Boletim' },
+  { tipo: 'boletim', titulo: 'Boletim' },
 ]
 
 const SECOES = [
@@ -28,7 +28,6 @@ const SECOES = [
   { rotulo: 'Guias', endereco: '/guias', nota: 'Uvas, regiões, harmonização e serviço' },
   { rotulo: 'Vinhos', endereco: '/vinhos', nota: 'Fichas com nota, preço e onde comprar' },
   { rotulo: 'Boletim', endereco: '/boletim', nota: 'O arquivo de todas as edições' },
-  { rotulo: 'Agenda', endereco: '/agenda', nota: 'Degustações, feiras e cursos' },
 ]
 
 /** Rede de segurança para quando ainda não há guias publicados. */
@@ -152,7 +151,7 @@ export default async function PaginaDeBusca({ searchParams }: Props) {
 async function BuscaEmBranco() {
   // As sugestões são um enfeite útil, não o assunto da página: se o banco não
   // responder, a busca continua funcionando com os termos fixos abaixo.
-  const guias = await listarGuias({ limite: 6 })
+  const guias = await listarTextos({ secao: 'guia', limite: 6 })
     .then((lista) => lista.docs)
     .catch(() => [])
 

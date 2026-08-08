@@ -48,7 +48,7 @@ import {
   obterPostBeehiiv,
   type PostBeehiiv,
 } from '@/lib/beehiiv'
-import type { Edicao } from '@/payload-types'
+import type { Texto } from '@/payload-types'
 
 /* -------------------------------------------------------------------------- */
 /* Nós do Lexical                                                              */
@@ -168,7 +168,7 @@ const noLink = (endereco: string, filhos: NoLexical[]): NoLexical => ({
   version: 3,
 })
 
-const montarCorpo = (nos: NoLexical[]): Edicao['corpo'] => ({
+const montarCorpo = (nos: NoLexical[]): Texto['corpo'] => ({
   root: {
     type: 'root',
     children: nos,
@@ -852,11 +852,11 @@ interface DadosDaEdicao {
   titulo: string
   subtitulo?: string
   resumo: string
-  corpo: Edicao['corpo']
-  blocos: { titulo: string; ancora: string }[]
+  corpo: Texto['corpo']
+  secao: 'boletim'
   numero: number
   slug: string
-  dataEnvio: string
+  dataPublicacao: string
   urlBeehiiv?: string
   importadaEm: string
   _status: 'draft' | 'published'
@@ -871,8 +871,8 @@ interface DadosDaEdicao {
  */
 type Correspondencia =
   | { tipo: 'nova' }
-  | { tipo: 'importada'; edicao: Edicao }
-  | { tipo: 'conflito'; edicao: Edicao }
+  | { tipo: 'importada'; edicao: Texto }
+  | { tipo: 'conflito'; edicao: Texto }
 
 /** Procura a edição já importada: primeiro pelo endereço no beehiiv, depois pelo número. */
 async function procurarEdicao(
@@ -881,11 +881,16 @@ async function procurarEdicao(
   numero: number,
 ): Promise<Correspondencia> {
   const resultado = await payload.find({
-    collection: 'edicoes',
+    collection: 'textos',
     where: {
-      or: [
-        ...(urlBeehiiv ? [{ urlBeehiiv: { equals: urlBeehiiv } }] : []),
-        { numero: { equals: numero } },
+      and: [
+        { secao: { equals: 'boletim' } },
+        {
+          or: [
+            ...(urlBeehiiv ? [{ urlBeehiiv: { equals: urlBeehiiv } }] : []),
+            { numero: { equals: numero } },
+          ],
+        },
       ],
     },
     limit: 5,
@@ -914,7 +919,7 @@ async function slugLivre(payload: Payload, base: string, idAtual?: number): Prom
   let candidato = base
   for (let tentativa = 2; tentativa <= 30; tentativa += 1) {
     const resultado = await payload.find({
-      collection: 'edicoes',
+      collection: 'textos',
       where: { slug: { equals: candidato } },
       limit: 1,
       depth: 0,
@@ -1066,8 +1071,10 @@ async function principal(): Promise<number> {
         primeirasPalavras(textoDoCorpo, 50),
       420,
     )
+    // As âncoras não são mais gravadas: a página deriva o índice dos H2 do corpo.
+    // Contá-las aqui continua útil para o relatório da importação.
     const blocos = extrairBlocos(nos)
-    const dataEnvio = new Date((post.publish_date ?? 0) * 1000).toISOString()
+    const dataPublicacao = new Date((post.publish_date ?? 0) * 1000).toISOString()
     const urlBeehiiv = post.web_url?.trim() || undefined
 
     const correspondencia = await procurarEdicao(payload, urlBeehiiv, numero)
@@ -1096,10 +1103,10 @@ async function principal(): Promise<number> {
       subtitulo: post.subtitle?.trim() ? encurtar(post.subtitle.trim(), 240) : undefined,
       resumo,
       corpo: montarCorpo(nos),
-      blocos,
+      secao: 'boletim',
       numero,
       slug,
-      dataEnvio,
+      dataPublicacao,
       urlBeehiiv,
       importadaEm: new Date().toISOString(),
       _status: opcoes.publicar ? 'published' : 'draft',
@@ -1107,7 +1114,7 @@ async function principal(): Promise<number> {
 
     const acao = existente ? 'atualizar' : 'criar'
     console.log(
-      `  ${rotulo} · ${acao} · ${slug} · ${dataEnvio.slice(0, 10)} · ` +
+      `  ${rotulo} · ${acao} · ${slug} · ${dataPublicacao.slice(0, 10)} · ` +
         `${nos.length} bloco(s), ${blocos.length} âncora(s)`,
     )
 
@@ -1115,7 +1122,7 @@ async function principal(): Promise<number> {
       try {
         if (existente) {
           await payload.update({
-            collection: 'edicoes',
+            collection: 'textos',
             id: existente.id,
             data: dados,
             draft: !opcoes.publicar,
@@ -1123,7 +1130,7 @@ async function principal(): Promise<number> {
           atualizadas += 1
         } else {
           await payload.create({
-            collection: 'edicoes',
+            collection: 'textos',
             // `chipCor` vazio de propósito: o hook da coleção pinta a edição pela
             // numeração, e é assim que a fita cromática do arquivo cresce sozinha.
             data: { ...dados, chipCor: null },

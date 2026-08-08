@@ -9,7 +9,7 @@ import { TituloDeSecao } from '@/components/Secao'
 import { ESCALA_CROMATICA } from '@/lib/escala-cores'
 import { dataPorExtenso } from '@/lib/formatar'
 import { metadadosDeIndice } from '@/lib/metadados'
-import { listarEdicoes } from '@/lib/consultas'
+import { listarTextos } from '@/lib/consultas'
 import { schemaDaEdicao, schemaDeMigalhas, schemaDoPeriodico } from '@/lib/schema'
 import { obterConfiguracoes } from '@/lib/site'
 
@@ -27,7 +27,7 @@ export const metadata: Metadata = metadadosDeIndice({
 export default async function HubDoBoletim() {
   const [config, arquivo] = await Promise.all([
     obterConfiguracoes(),
-    listarEdicoes({ limite: 300, ordem: 'asc' }),
+    listarTextos({ secao: 'boletim', limite: 300, ordem: 'numero' }),
   ])
 
   const edicoes = arquivo.docs
@@ -69,7 +69,7 @@ export default async function HubDoBoletim() {
               <div>
                 <dt className="rotulo text-grafite">Última</dt>
                 <dd className="mt-2 text-apoio leading-snug">
-                  {ultima ? dataPorExtenso(ultima.dataEnvio) : '—'}
+                  {ultima ? dataPorExtenso(ultima.dataPublicacao) : '—'}
                 </dd>
               </div>
             </dl>

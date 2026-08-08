@@ -2,7 +2,8 @@ import Link from 'next/link'
 
 import { faixaPorId } from '@/lib/escala-cores'
 import { dataCurta, doisDigitos, iso } from '@/lib/formatar'
-import type { Edicao } from '@/payload-types'
+import { resumoOuTrecho } from '@/lib/texto'
+import type { Texto } from '@/payload-types'
 
 /**
  * A FITA CROMÁTICA DO BOLETIM — o elemento assinatura do arquivo.
@@ -19,7 +20,7 @@ export function FitaCromatica({
   edicoes,
   altura = 'alta',
 }: {
-  edicoes: Edicao[]
+  edicoes: Texto[]
   altura?: 'baixa' | 'alta'
 }) {
   if (edicoes.length === 0) return null
@@ -52,7 +53,7 @@ export function FitaCromatica({
                   className="font-[family-name:var(--font-rotulo)] text-[0.625rem] font-semibold tracking-[0.1em]"
                   style={{ color: faixa.contraste }}
                 >
-                  {doisDigitos(edicao.numero)}
+                  {doisDigitos(edicao.numero ?? 0)}
                 </span>
 
                 {/* Etiqueta que aparece ao passar o cursor ou ao chegar pelo teclado. */}
@@ -61,7 +62,7 @@ export function FitaCromatica({
                   className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-56 -translate-x-1/2 border border-tinta bg-papel px-3 py-2.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100 md:block"
                 >
                   <span className="rotulo block text-grafite">
-                    Edição {edicao.numero} · {dataCurta(edicao.dataEnvio)}
+                    Edição {edicao.numero} · {dataCurta(edicao.dataPublicacao)}
                   </span>
                   <span className="mt-1 block font-[family-name:var(--font-display)] text-[0.95rem] leading-snug linhas-2">
                     {edicao.titulo}
@@ -77,7 +78,7 @@ export function FitaCromatica({
 }
 
 /** Fita reduzida, sem links — usada como ornamento no topo de uma seção. */
-export function FitaDecorativa({ edicoes }: { edicoes: Pick<Edicao, 'id' | 'chipCor'>[] }) {
+export function FitaDecorativa({ edicoes }: { edicoes: Pick<Texto, 'id' | 'chipCor'>[] }) {
   if (edicoes.length === 0) return null
   return (
     <div className="flex h-1.5 w-full" aria-hidden="true">
@@ -93,7 +94,7 @@ export function FitaDecorativa({ edicoes }: { edicoes: Pick<Edicao, 'id' | 'chip
 }
 
 /** Item de lista de edição — a alternativa em texto à fita. */
-export function LinhaEdicao({ edicao }: { edicao: Edicao }) {
+export function LinhaEdicao({ edicao }: { edicao: Texto }) {
   const faixa = faixaPorId(edicao.chipCor)
   return (
     <article className="group relative flex items-baseline gap-4 border-t border-fio py-6 md:gap-8">
@@ -101,7 +102,7 @@ export function LinhaEdicao({ edicao }: { edicao: Edicao }) {
         className="cartaz !text-[2.5rem] !leading-none text-tenue transition-colors duration-300 group-hover:text-borra md:!text-[3.5rem]"
         aria-hidden="true"
       >
-        {doisDigitos(edicao.numero)}
+        {doisDigitos(edicao.numero ?? 0)}
       </span>
 
       <div className="min-w-0 flex-1">
@@ -111,7 +112,7 @@ export function LinhaEdicao({ edicao }: { edicao: Edicao }) {
             style={{ backgroundColor: faixa.hex }}
             aria-hidden="true"
           />
-          <time dateTime={iso(edicao.dataEnvio)}>{dataCurta(edicao.dataEnvio)}</time>
+          <time dateTime={iso(edicao.dataPublicacao)}>{dataCurta(edicao.dataPublicacao)}</time>
         </p>
         <h3 className="mt-1.5 text-t3 leading-tight">
           <Link href={`/boletim/${edicao.slug}`} className="link-titulo">
@@ -119,9 +120,9 @@ export function LinhaEdicao({ edicao }: { edicao: Edicao }) {
             {edicao.titulo}
           </Link>
         </h3>
-        {edicao.resumo && (
+        {resumoOuTrecho(edicao) && (
           <p className="mt-2 max-w-prose text-apoio leading-relaxed text-grafite linhas-2 bonito">
-            {edicao.resumo}
+            {resumoOuTrecho(edicao)}
           </p>
         )}
       </div>

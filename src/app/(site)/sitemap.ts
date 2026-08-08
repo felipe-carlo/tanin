@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import type { Where } from 'payload'
 
 import { obterPayload } from '@/lib/payload'
+import { BASE_POR_SECAO, type Secao } from '@/lib/secoes'
 import { URL_SITE } from '@/lib/site'
 
 /**
@@ -39,7 +40,6 @@ const ROTAS_FIXAS: {
   { caminho: '/boletim', prioridade: 0.8, frequencia: 'weekly', secao: '/boletim' },
   { caminho: '/vinhos', prioridade: 0.8, frequencia: 'daily', secao: '/vinhos' },
   { caminho: '/guias', prioridade: 0.8, frequencia: 'weekly', secao: '/guias' },
-  { caminho: '/agenda', prioridade: 0.8, frequencia: 'weekly' },
   { caminho: '/sobre', prioridade: 0.6, frequencia: 'yearly' },
   // A busca só serve a quem já está dentro do site: entra no mapa, mas por último.
   { caminho: '/busca', prioridade: 0.2, frequencia: 'monthly' },
@@ -60,6 +60,7 @@ const publicado = (): Where => ({
 
 interface DocumentoDoMapa {
   slug?: string | null
+  secao?: string | null
   dataAtualizacao?: string | null
   updatedAt?: string | null
   seo?: { naoIndexar?: boolean | null } | null
@@ -100,35 +101,27 @@ async function rotasDeConteudo(): Promise<SecaoDoMapa[]> {
   const payload = await obterPayload()
   const comum = { where: publicado(), depth: 0, pagination: false, overrideAccess: false }
 
-  const [materias, edicoes, vinhos, guias] = await Promise.all([
+  const [textos, vinhos] = await Promise.all([
     payload.find({
-      collection: 'materias',
+      collection: 'textos',
       ...comum,
-      select: { slug: true, dataAtualizacao: true, updatedAt: true, seo: true },
-    }),
-    payload.find({
-      collection: 'edicoes',
-      ...comum,
-      select: { slug: true, updatedAt: true, seo: true },
+      select: { slug: true, secao: true, dataAtualizacao: true, updatedAt: true, seo: true },
     }),
     payload.find({
       collection: 'vinhos',
       ...comum,
       select: { slug: true, dataAtualizacao: true, updatedAt: true, seo: true },
     }),
-    payload.find({
-      collection: 'guias',
-      ...comum,
-      select: { slug: true, dataAtualizacao: true, updatedAt: true, seo: true },
-    }),
   ])
 
+  const daSecao = (secao: Secao) => textos.docs.filter((texto) => texto.secao === secao)
+
   return [
-    montarSecao('/materias', materias.docs, 0.7, 'monthly'),
+    montarSecao(BASE_POR_SECAO.materia, daSecao('materia'), 0.7, 'monthly'),
     // Uma edição enviada é um arquivo fechado: muda de endereço nunca, de conteúdo quase nunca.
-    montarSecao('/boletim', edicoes.docs, 0.7, 'yearly'),
+    montarSecao(BASE_POR_SECAO.boletim, daSecao('boletim'), 0.7, 'yearly'),
+    montarSecao(BASE_POR_SECAO.guia, daSecao('guia'), 0.7, 'monthly'),
     montarSecao('/vinhos', vinhos.docs, 0.7, 'monthly'),
-    montarSecao('/guias', guias.docs, 0.7, 'monthly'),
   ]
 }
 

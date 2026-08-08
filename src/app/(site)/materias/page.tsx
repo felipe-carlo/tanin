@@ -7,8 +7,9 @@ import { JsonLd } from '@/components/JsonLd'
 import { Migalhas } from '@/components/Migalhas'
 import { Paginacao } from '@/components/Paginacao'
 import { metadadosDeIndice } from '@/lib/metadados'
-import { listarMaterias } from '@/lib/consultas'
-import { obterPayload, umParametro, type ParametrosDeBusca } from '@/lib/payload'
+import { CATEGORIAS_DE_MATERIA, categoriaPorValor } from '@/lib/categorias'
+import { listarTextos } from '@/lib/consultas'
+import { umParametro, type ParametrosDeBusca } from '@/lib/payload'
 import { schemaDeLista, schemaDeMigalhas } from '@/lib/schema'
 
 export const revalidate = 1800
@@ -37,19 +38,14 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 export default async function IndiceDeMaterias({ searchParams }: Props) {
   const parametros = await searchParams
   const categoriaAtiva = umParametro(parametros.categoria)
-  const tagAtiva = umParametro(parametros.tag)
   const pagina = Math.max(1, Number(umParametro(parametros.pagina) ?? 1) || 1)
 
-  const payload = await obterPayload()
-  const [resultado, categorias] = await Promise.all([
-    listarMaterias({
-      limite: 13,
-      pagina,
-      categoria: categoriaAtiva,
-      tag: tagAtiva,
-    }),
-    payload.find({ collection: 'categorias', limit: 20, sort: 'ordem', depth: 0 }),
-  ])
+  const resultado = await listarTextos({
+    secao: 'materia',
+    limite: 13,
+    pagina,
+    categoria: categoriaAtiva,
+  })
 
   const [primeira, ...demais] = resultado.docs
   const trilha = [
@@ -57,7 +53,7 @@ export default async function IndiceDeMaterias({ searchParams }: Props) {
     { nome: 'Matérias', endereco: '/materias' },
   ]
 
-  const filtroAtivo = categorias.docs.find((categoria) => categoria.slug === categoriaAtiva)
+  const filtroAtivo = categoriaPorValor(categoriaAtiva)
 
   return (
     <>
@@ -69,7 +65,7 @@ export default async function IndiceDeMaterias({ searchParams }: Props) {
             className="col-span-6 text-t1 tracking-[-0.032em] lg:col-span-5"
             style={{ fontVariationSettings: "'SOFT' 22, 'WONK' 1", fontWeight: 500 }}
           >
-            {filtroAtivo ? filtroAtivo.nome : 'Matérias'}
+            {filtroAtivo ? filtroAtivo.label : 'Matérias'}
           </h1>
           <p className="col-span-6 mt-3 text-apoio leading-relaxed text-grafite lg:col-span-5 lg:col-start-8 lg:mt-0 bonito">
             {filtroAtivo?.descricao ?? DESCRICAO}
@@ -78,53 +74,42 @@ export default async function IndiceDeMaterias({ searchParams }: Props) {
 
         {/* Filtro de categoria em links de verdade: cada recorte tem endereço próprio,
             pode ser compartilhado e é rastreável pelo buscador. */}
-        {categorias.docs.length > 0 && (
-          <nav aria-label="Filtrar por categoria" className="mt-6 overflow-x-auto">
-            <ul className="flex min-w-max items-center gap-2 pb-1">
-              <li>
-                <Link
-                  href="/materias"
-                  aria-current={!categoriaAtiva && !tagAtiva ? 'page' : undefined}
-                  className={`rotulo inline-flex h-11 items-center border px-4 transition-colors ${
-                    !categoriaAtiva && !tagAtiva
-                      ? 'border-tinta bg-tinta text-papel'
-                      : 'border-fio text-grafite hover:border-tinta hover:text-tinta'
-                  }`}
-                >
-                  Tudo
-                </Link>
-              </li>
-              {categorias.docs.map((categoria) => {
-                const ativa = categoria.slug === categoriaAtiva
-                return (
-                  <li key={categoria.id}>
-                    <Link
-                      href={`/materias?categoria=${categoria.slug}`}
-                      aria-current={ativa ? 'page' : undefined}
-                      className={`rotulo inline-flex h-11 items-center gap-2 border px-4 transition-colors ${
-                        ativa
-                          ? 'border-tinta bg-tinta text-papel'
-                          : 'border-fio text-grafite hover:border-tinta hover:text-tinta'
-                      }`}
-                    >
-                      <Chip cor={categoria.chipCor} tamanho="pequeno" />
-                      {categoria.nome}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          </nav>
-        )}
-
-        {tagAtiva && (
-          <p className="mt-6 flex items-center gap-3">
-            <span className="rotulo text-grafite">Assunto: {tagAtiva}</span>
-            <Link href="/materias" className="rotulo text-borra hover:underline">
-              limpar
-            </Link>
-          </p>
-        )}
+        <nav aria-label="Filtrar por editoria" className="mt-6 overflow-x-auto">
+          <ul className="flex min-w-max items-center gap-2 pb-1">
+            <li>
+              <Link
+                href="/materias"
+                aria-current={!categoriaAtiva ? 'page' : undefined}
+                className={`rotulo inline-flex h-11 items-center border px-4 transition-colors ${
+                  !categoriaAtiva
+                    ? 'border-tinta bg-tinta text-papel'
+                    : 'border-fio text-grafite hover:border-tinta hover:text-tinta'
+                }`}
+              >
+                Tudo
+              </Link>
+            </li>
+            {CATEGORIAS_DE_MATERIA.map((categoria) => {
+              const ativa = categoria.value === categoriaAtiva
+              return (
+                <li key={categoria.value}>
+                  <Link
+                    href={`/materias?categoria=${categoria.value}`}
+                    aria-current={ativa ? 'page' : undefined}
+                    className={`rotulo inline-flex h-11 items-center gap-2 border px-4 transition-colors ${
+                      ativa
+                        ? 'border-tinta bg-tinta text-papel'
+                        : 'border-fio text-grafite hover:border-tinta hover:text-tinta'
+                    }`}
+                  >
+                    <Chip cor={categoria.chipCor} tamanho="pequeno" />
+                    {categoria.label}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </nav>
 
         {resultado.docs.length === 0 ? (
           <p className="py-20 text-corpo-grande text-grafite">

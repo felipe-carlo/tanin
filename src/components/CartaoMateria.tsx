@@ -2,21 +2,20 @@ import Link from 'next/link'
 
 import { Chip } from '@/components/Chip'
 import { Imagem } from '@/components/Imagem'
+import { categoriaPorValor } from '@/lib/categorias'
 import { dataPorExtenso, iso } from '@/lib/formatar'
-import type { Categoria, Guia, Materia } from '@/payload-types'
+import { enderecoDoTexto } from '@/lib/secoes'
+import { resumoOuTrecho } from '@/lib/texto'
+import type { Texto } from '@/payload-types'
 
-type Conteudo = Materia | Guia
+type Conteudo = Texto
 
 const categoriaDe = (conteudo: Conteudo): string | null => {
-  if ('categoria' in conteudo && conteudo.categoria && typeof conteudo.categoria === 'object') {
-    return (conteudo.categoria as Categoria).nome ?? null
-  }
-  if ('tipoGuia' in conteudo) return 'Guia'
-  return null
+  if (conteudo.secao === 'guia') return 'Guia'
+  return categoriaPorValor(conteudo.categoria)?.label ?? null
 }
 
-const enderecoDe = (conteudo: Conteudo): string =>
-  'tipoGuia' in conteudo ? `/guias/${conteudo.slug}` : `/materias/${conteudo.slug}`
+const enderecoDe = (conteudo: Conteudo): string => enderecoDoTexto(conteudo)
 
 /**
  * Cartão de matéria com imagem.
@@ -88,13 +87,13 @@ export function CartaoMateria({
         </Link>
       </Titulo>
 
-      {mostrarResumo && conteudo.resumo && (
+      {mostrarResumo && resumoOuTrecho(conteudo) && (
         <p className="mt-3 text-apoio leading-relaxed text-grafite linhas-3 bonito">
-          {conteudo.resumo}
+          {resumoOuTrecho(conteudo)}
         </p>
       )}
 
-      {'tempoLeitura' in conteudo && conteudo.tempoLeitura ? (
+      {conteudo.tempoLeitura ? (
         <p className="rotulo mt-auto pt-4 text-tenue">{conteudo.tempoLeitura} min de leitura</p>
       ) : null}
     </article>
@@ -141,9 +140,9 @@ export function LinhaMateria({
               {conteudo.titulo}
             </Link>
           </Titulo>
-          {conteudo.resumo && (
+          {resumoOuTrecho(conteudo) && (
             <p className="mt-2 max-w-prose text-apoio leading-relaxed text-grafite linhas-2 bonito">
-              {conteudo.resumo}
+              {resumoOuTrecho(conteudo)}
             </p>
           )}
         </div>

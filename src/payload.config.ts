@@ -4,24 +4,13 @@ import { fileURLToPath } from 'url'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { s3Storage } from '@payloadcms/storage-s3'
 import { pt } from '@payloadcms/translations/languages/pt'
-import { en } from '@payloadcms/translations/languages/en'
 import { buildConfig } from 'payload'
 import sharp from 'sharp'
 
-import { Autores } from '@/collections/Autores'
-import { Edicoes } from '@/collections/Edicoes'
-import { Eventos } from '@/collections/Eventos'
-import { Guias } from '@/collections/Guias'
+import { traducoesPtBr } from '@/admin/traducoes'
 import { Inscricoes } from '@/collections/Inscricoes'
-import { Materias } from '@/collections/Materias'
 import { Midia } from '@/collections/Midia'
-import {
-  Categorias,
-  Importadoras,
-  Regioes,
-  Tags,
-  Uvas,
-} from '@/collections/Taxonomias'
+import { Textos } from '@/collections/Textos'
 import { Usuarios } from '@/collections/Usuarios'
 import { Vinhos } from '@/collections/Vinhos'
 import { Configuracoes } from '@/globals/Configuracoes'
@@ -87,49 +76,19 @@ export default buildConfig({
     },
   },
   /**
-   * O painel fala português. O inglês fica disponível só como rede de segurança.
+   * O painel fala português do Brasil, e só.
    *
-   * A tradução oficial do Payload deixa alguns termos em inglês — "Login", "Email",
-   * "Log out". Num painel que uma jornalista vai abrir todo dia, isso é justamente o
-   * tipo de detalhe que faz a ferramenta parecer emprestada de outra pessoa.
+   * O único português do pacote oficial veio de Portugal, com sobras de inglês por
+   * cima. As correções, chave a chave, moram em `src/admin/traducoes.ts`. O inglês
+   * saiu do seletor de idioma: uma opção que ninguém usa é só mais uma decisão.
    */
   i18n: {
-    supportedLanguages: { pt, en },
+    supportedLanguages: { pt },
     fallbackLanguage: 'pt',
-    translations: {
-      pt: {
-        authentication: {
-          login: 'Entrar',
-          logOut: 'Sair',
-          logout: 'Sair',
-          emailAddress: 'E-mail',
-          forgotPasswordQuestion: 'Esqueceu a senha?',
-        },
-        general: {
-          email: 'E-mail',
-          createNew: 'Criar',
-          showAllLabel: 'Mostrar todos',
-        },
-      },
-    },
+    translations: traducoesPtBr,
   },
   localization: false,
-  collections: [
-    Materias,
-    Edicoes,
-    Vinhos,
-    Guias,
-    Eventos,
-    Autores,
-    Categorias,
-    Tags,
-    Uvas,
-    Regioes,
-    Importadoras,
-    Midia,
-    Inscricoes,
-    Usuarios,
-  ],
+  collections: [Textos, Vinhos, Midia, Inscricoes, Usuarios],
   globals: [Configuracoes],
   editor: editorTanin,
   db: postgresAdapter({

@@ -12,9 +12,10 @@ import { faixaPorId } from '@/lib/escala-cores'
 import { dataPorExtenso, doisDigitos, iso } from '@/lib/formatar'
 import { montarMetadados } from '@/lib/metadados'
 import { obterPayload } from '@/lib/payload'
-import { obterEdicao, obterVizinhasDaEdicao } from '@/lib/consultas'
+import { obterTexto, obterVizinhasDaEdicao } from '@/lib/consultas'
 import { schemaDaEdicao, schemaDeMigalhas } from '@/lib/schema'
 import { obterConfiguracoes } from '@/lib/site'
+import { extrairIndice, resumoOuTrecho } from '@/lib/texto'
 
 export const revalidate = 3600
 
@@ -22,8 +23,10 @@ export async function generateStaticParams() {
   try {
     const payload = await obterPayload()
     const edicoes = await payload.find({
-      collection: 'edicoes',
-      where: { _status: { equals: 'published' } },
+      collection: 'textos',
+      where: {
+        and: [{ _status: { equals: 'published' } }, { secao: { equals: 'boletim' } }],
+      },
       limit: 500,
       depth: 0,
       select: { slug: true },
@@ -39,32 +42,33 @@ type Props = { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const edicao = await obterEdicao(slug)
+  const edicao = await obterTexto('boletim', slug)
   if (!edicao) return { title: 'Edição não encontrada' }
 
   return montarMetadados({
     seo: edicao.seo,
     titulo: `Edição ${edicao.numero}: ${edicao.titulo}`,
-    descricao: edicao.resumo,
+    descricao: resumoOuTrecho(edicao),
     imagem: edicao.destaque?.imagem,
     caminho: `/boletim/${edicao.slug}`,
-    publicadoEm: edicao.dataEnvio,
+    publicadoEm: edicao.dataPublicacao,
     atualizadoEm: edicao.updatedAt,
   })
 }
 
 export default async function PaginaDaEdicao({ params }: Props) {
   const { slug } = await params
-  const edicao = await obterEdicao(slug)
+  const edicao = await obterTexto('boletim', slug)
   if (!edicao) notFound()
 
   const [config, vizinhas] = await Promise.all([
     obterConfiguracoes(),
-    obterVizinhasDaEdicao(edicao.numero),
+    obterVizinhasDaEdicao(edicao.numero ?? 0),
   ])
 
   const faixa = faixaPorId(edicao.chipCor)
-  const blocos = (edicao.blocos ?? []).filter((bloco) => bloco.titulo && bloco.ancora)
+  // O índice nasce dos títulos H2 do próprio corpo — nunca dessincroniza do texto.
+  const blocos = extrairIndice(edicao.corpo)
 
   const trilha = [
     { nome: 'Início', endereco: '/' },
@@ -86,7 +90,7 @@ export default async function PaginaDaEdicao({ params }: Props) {
             className="col-span-6 cartaz text-borra lg:col-span-2"
             aria-hidden="true"
           >
-            {doisDigitos(edicao.numero)}
+            {doisDigitos(edicao.numero ?? 0)}
           </p>
 
           <div className="col-span-6 lg:col-span-8 lg:col-start-4">
@@ -98,7 +102,7 @@ export default async function PaginaDaEdicao({ params }: Props) {
               <span aria-hidden="true" className="text-tenue">
                 ·
               </span>
-              <time dateTime={iso(edicao.dataEnvio)}>{dataPorExtenso(edicao.dataEnvio)}</time>
+              <time dateTime={iso(edicao.dataPublicacao)}>{dataPorExtenso(edicao.dataPublicacao)}</time>
             </p>
 
             <h1
@@ -131,9 +135,11 @@ export default async function PaginaDaEdicao({ params }: Props) {
 
         <div className="grade mt-12 md:mt-16">
           <div className="col-span-6 lg:col-span-7 lg:col-start-2">
-            <p className="mb-10 border-l border-borra pl-5 text-corpo-grande leading-relaxed bonito">
-              {edicao.resumo}
-            </p>
+            {edicao.resumo && (
+              <p className="mb-10 border-l border-borra pl-5 text-corpo-grande leading-relaxed bonito">
+                {edicao.resumo}
+              </p>
+            )}
 
             <TextoRico dados={edicao.corpo} />
           </div>
@@ -151,7 +157,7 @@ export default async function PaginaDaEdicao({ params }: Props) {
                 <h2 className="rotulo border-b border-tinta pb-3">Nesta edição</h2>
                 <ol className="mt-4 space-y-3.5">
                   {blocos.map((bloco, indice) => (
-                    <li key={bloco.id ?? indice} className="flex gap-3">
+                    <li key={bloco.ancora} className="flex gap-3">
                       <span aria-hidden="true" className="rotulo pt-0.5 text-tenue">
                         {doisDigitos(indice + 1)}
                       </span>

@@ -11,18 +11,20 @@
  * autora de uma matéria é a mesma pessoa da página /sobre.
  */
 
-import type { Autor, Configuracoes, Edicao, Evento, Guia, Materia, Midia, Vinho } from '@/payload-types'
+import type { Configuracoes, Midia, Texto, Vinho } from '@/payload-types'
+import { categoriaPorValor } from '@/lib/categorias'
 import { NOTA_MAXIMA, NOTA_MINIMA, notaParaSchema } from '@/lib/nota'
-import { URL_SITE, urlAbsoluta } from '@/lib/site'
+import { resumoOuTrecho } from '@/lib/texto'
+import { URL_SITE, urlAbsoluta, type Autora } from '@/lib/site'
 import { comoMidia, urlDaMidia } from '@/components/Imagem'
 
 const ID_PUBLICACAO = `${URL_SITE}/#publicacao`
 const ID_SITE = `${URL_SITE}/#site`
 
-type Relacao<T> = number | T | null | undefined
+/** A autora é uma só e mora nas configurações — o `@id` dela é fixo. */
+const ID_AUTORA = `${URL_SITE}/sobre#autora`
 
-const populado = <T,>(valor: Relacao<T>): T | null =>
-  valor && typeof valor === 'object' ? (valor as T) : null
+type Relacao<T> = number | T | null | undefined
 
 const imagemAbsoluta = (midia: Relacao<Midia>, tamanho?: 'compartilhamento' | 'largura') => {
   const url = urlDaMidia(midia as never, tamanho)
@@ -43,7 +45,7 @@ const limpar = <T extends object>(objeto: T): T =>
  * Tanin é um veículo, não uma empresa qualquer com um blog.
  */
 export function schemaDaPublicacao(config: Partial<Configuracoes>) {
-  const autora = populado<Autor>(config.autoraPrincipal as Relacao<Autor>)
+  const autora = config.autora
   const redes = [
     ...(config.redes?.map((rede) => rede.url) ?? []),
     ...(autora?.redes?.map((rede) => rede.url) ?? []),
@@ -59,7 +61,7 @@ export function schemaDaPublicacao(config: Partial<Configuracoes>) {
     description: config.descricao ?? undefined,
     logo: imagemAbsoluta(config.imagemPadrao as Relacao<Midia>, 'compartilhamento'),
     sameAs: redes.length > 0 ? Array.from(new Set(redes)) : undefined,
-    founder: autora ? { '@id': `${URL_SITE}/sobre#${autora.slug ?? 'autora'}` } : undefined,
+    founder: autora?.nome ? { '@id': ID_AUTORA } : undefined,
     inLanguage: 'pt-BR',
     knowsAbout: ['Vinho', 'Enologia', 'Harmonização', 'Regiões vinícolas', 'Degustação'],
     ethicsPolicy: `${URL_SITE}/sobre#como-avaliamos`,
@@ -87,20 +89,20 @@ export function schemaDoSite(config: Partial<Configuracoes>) {
 /* Pessoa                                                                      */
 /* -------------------------------------------------------------------------- */
 
-export function schemaDaPessoa(autor: Autor, comContexto = false) {
+export function schemaDaPessoa(autora: Autora, comContexto = false) {
   return limpar({
     ...(comContexto ? { '@context': 'https://schema.org' } : {}),
     '@type': 'Person',
-    '@id': `${URL_SITE}/sobre#${autor.slug ?? autor.id}`,
-    name: autor.nome,
-    jobTitle: autor.cargo ?? undefined,
-    description: autor.bioCurta ?? undefined,
-    image: imagemAbsoluta(autor.foto as Relacao<Midia>, 'quadrado' as never),
+    '@id': ID_AUTORA,
+    name: autora.nome ?? 'Ana Luiza Leal',
+    jobTitle: autora.cargo ?? undefined,
+    description: autora.bioCurta ?? undefined,
+    image: imagemAbsoluta(autora.foto as Relacao<Midia>, 'quadrado' as never),
     url: `${URL_SITE}/sobre`,
-    email: autor.email ?? undefined,
-    sameAs: autor.redes?.map((rede) => rede.url).filter(Boolean),
+    email: autora.email ?? undefined,
+    sameAs: autora.redes?.map((rede) => rede.url).filter(Boolean),
     knowsAbout: ['Vinho', 'Jornalismo de vinho', 'Degustação'],
-    hasCredential: autor.credenciais?.map((credencial) =>
+    hasCredential: autora.credenciais?.map((credencial) =>
       limpar({
         '@type': 'EducationalOccupationalCredential',
         name: credencial.texto,
@@ -115,8 +117,7 @@ export function schemaDaPessoa(autor: Autor, comContexto = false) {
 /* Artigos                                                                     */
 /* -------------------------------------------------------------------------- */
 
-export function schemaDaMateria(materia: Materia) {
-  const autor = populado<Autor>(materia.autor as Relacao<Autor>)
+export function schemaDaMateria(materia: Texto, autora: Autora) {
   const url = `${URL_SITE}/materias/${materia.slug}`
   const imagem = imagemAbsoluta(materia.destaque?.imagem as Relacao<Midia>, 'compartilhamento')
 
@@ -126,29 +127,24 @@ export function schemaDaMateria(materia: Materia) {
     '@id': `${url}#artigo`,
     headline: materia.titulo,
     alternativeHeadline: materia.subtitulo ?? undefined,
-    description: materia.resumo,
+    description: resumoOuTrecho(materia),
     url,
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
     datePublished: materia.dataPublicacao ?? materia.createdAt,
     dateModified: materia.dataAtualizacao ?? materia.updatedAt,
     image: imagem ? [imagem] : undefined,
-    author: autor ? schemaDaPessoa(autor) : undefined,
+    author: schemaDaPessoa(autora),
     publisher: { '@id': ID_PUBLICACAO },
     isAccessibleForFree: true,
     inLanguage: 'pt-BR',
-    articleSection:
-      populado<{ nome?: string }>(materia.categoria as Relacao<{ nome?: string }>)?.nome ?? undefined,
-    keywords: materia.tags
-      ?.map((tag) => populado<{ nome?: string }>(tag as Relacao<{ nome?: string }>)?.nome)
-      .filter(Boolean)
-      .join(', '),
+    articleSection: categoriaPorValor(materia.categoria)?.label,
+    keywords: materia.seo?.palavrasChave ?? undefined,
     wordCount: materia.tempoLeitura ? materia.tempoLeitura * 200 : undefined,
     timeRequired: materia.tempoLeitura ? `PT${materia.tempoLeitura}M` : undefined,
   })
 }
 
-export function schemaDoGuia(guia: Guia) {
-  const autor = populado<Autor>(guia.autor as Relacao<Autor>)
+export function schemaDoGuia(guia: Texto, autora: Autora) {
   const url = `${URL_SITE}/guias/${guia.slug}`
   const imagem = imagemAbsoluta(guia.destaque?.imagem as Relacao<Midia>, 'compartilhamento')
 
@@ -158,18 +154,18 @@ export function schemaDoGuia(guia: Guia) {
     '@id': `${url}#guia`,
     headline: guia.titulo,
     alternativeHeadline: guia.subtitulo ?? undefined,
-    description: guia.resumo,
+    description: resumoOuTrecho(guia),
     url,
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
     datePublished: guia.dataPublicacao ?? guia.createdAt,
     dateModified: guia.dataAtualizacao ?? guia.updatedAt,
     image: imagem ? [imagem] : undefined,
-    author: autor ? schemaDaPessoa(autor) : undefined,
+    author: schemaDaPessoa(autora),
     publisher: { '@id': ID_PUBLICACAO },
     isAccessibleForFree: true,
     inLanguage: 'pt-BR',
-    educationalLevel: guia.nivel === 'iniciante' ? 'Iniciante' : 'Intermediário',
-about: { '@type': 'Thing', name: 'Vinho' },
+    educationalLevel: guia.nivel === 'intermediario' ? 'Intermediário' : 'Iniciante',
+    about: { '@type': 'Thing', name: 'Vinho' },
   })
 }
 
@@ -192,7 +188,7 @@ export function schemaDoPeriodico(config: Partial<Configuracoes>) {
   })
 }
 
-export function schemaDaEdicao(edicao: Edicao, config: Partial<Configuracoes>) {
+export function schemaDaEdicao(edicao: Texto, config: Partial<Configuracoes>) {
   const url = `${URL_SITE}/boletim/${edicao.slug}`
   const imagem = imagemAbsoluta(edicao.destaque?.imagem as Relacao<Midia>, 'compartilhamento')
 
@@ -200,13 +196,13 @@ export function schemaDaEdicao(edicao: Edicao, config: Partial<Configuracoes>) {
     '@context': 'https://schema.org',
     '@type': 'PublicationIssue',
     '@id': `${url}#edicao`,
-    issueNumber: edicao.numero,
+    issueNumber: edicao.numero ?? undefined,
     name: edicao.titulo,
     headline: edicao.titulo,
-    description: edicao.resumo,
+    description: resumoOuTrecho(edicao),
     url,
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
-    datePublished: edicao.dataEnvio,
+    datePublished: edicao.dataPublicacao ?? edicao.createdAt,
     dateModified: edicao.updatedAt,
     image: imagem ? [imagem] : undefined,
     isPartOf: {
@@ -240,30 +236,24 @@ const FAIXA_PARA_PRECO: Record<string, { min: number; max?: number }> = {
  * Google entende como "alguém identificável provou isto e deu uma nota", e é dele
  * que saem as respostas quando alguém pergunta a uma IA se um vinho vale a pena.
  */
-export function schemaDoVinho(vinho: Vinho) {
-  const autor = populado<Autor>(vinho.autor as Relacao<Autor>)
+export function schemaDoVinho(vinho: Vinho, autora: Autora) {
   const url = `${URL_SITE}/vinhos/${vinho.slug}`
   const imagem = imagemAbsoluta(vinho.destaque?.imagem as Relacao<Midia>, 'compartilhamento')
-  const regiao = populado<{ nome?: string }>(vinho.regiao as Relacao<{ nome?: string }>)
-  const importadora = populado<{ nome?: string }>(vinho.importadora as Relacao<{ nome?: string }>)
   const faixa = vinho.faixaPreco ? FAIXA_PARA_PRECO[vinho.faixaPreco] : undefined
 
-  const uvas =
-    vinho.uvas
-      ?.map((item) => populado<{ nome?: string }>(item.uva as Relacao<{ nome?: string }>)?.nome)
-      .filter(Boolean) ?? []
+  const uvas = vinho.uvas?.map((item) => item.uva).filter(Boolean) ?? []
 
   const produto = limpar({
     '@type': 'Product',
     '@id': `${url}#produto`,
-    name: `${vinho.produtor} ${vinho.nome}${vinho.safra ? ` ${vinho.safra}` : ''}`,
+    name: [vinho.produtor, vinho.nome, vinho.safra].filter(Boolean).join(' '),
     category: 'Vinho',
-    brand: { '@type': 'Brand', name: vinho.produtor },
+    brand: vinho.produtor ? { '@type': 'Brand', name: vinho.produtor } : undefined,
     image: imagem ? [imagem] : undefined,
-    description: vinho.veredito,
-    countryOfOrigin: vinho.pais,
+    description: vinho.veredito ?? undefined,
+    countryOfOrigin: vinho.pais ?? undefined,
     additionalProperty: [
-      regiao?.nome && { '@type': 'PropertyValue', name: 'Região', value: regiao.nome },
+      vinho.regiao && { '@type': 'PropertyValue', name: 'Região', value: vinho.regiao },
       vinho.subRegiao && { '@type': 'PropertyValue', name: 'Denominação', value: vinho.subRegiao },
       vinho.safra && { '@type': 'PropertyValue', name: 'Safra', value: String(vinho.safra) },
       uvas.length > 0 && { '@type': 'PropertyValue', name: 'Uvas', value: uvas.join(', ') },
@@ -282,10 +272,10 @@ export function schemaDoVinho(vinho: Vinho) {
         name: 'Potencial de guarda',
         value: vinho.potencialGuarda,
       },
-      importadora?.nome && {
+      vinho.importadora?.nome && {
         '@type': 'PropertyValue',
         name: 'Importadora',
-        value: importadora.nome,
+        value: vinho.importadora.nome,
       },
     ].filter(Boolean),
     offers: faixa
@@ -307,10 +297,10 @@ export function schemaDoVinho(vinho: Vinho) {
     url,
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
     itemReviewed: produto,
-    reviewBody: vinho.veredito,
+    reviewBody: vinho.veredito ?? undefined,
     headline: `${vinho.nome}${vinho.safra ? ` ${vinho.safra}` : ''}`,
     reviewRating: notaParaSchema(vinho.nota),
-    author: autor ? schemaDaPessoa(autor) : undefined,
+    author: schemaDaPessoa(autora),
     publisher: { '@id': ID_PUBLICACAO },
     datePublished: vinho.dataPublicacao ?? vinho.createdAt,
     dateModified: vinho.dataAtualizacao ?? vinho.updatedAt,
@@ -321,47 +311,6 @@ export function schemaDoVinho(vinho: Vinho) {
 
 /** Explica a régua de notas em uma página só, para quem quiser conferir. */
 export const ESCALA_DE_NOTA_LEGIVEL = `Escala de ${NOTA_MINIMA} a ${NOTA_MAXIMA} taças, com meias taças.`
-
-/* -------------------------------------------------------------------------- */
-/* Evento                                                                      */
-/* -------------------------------------------------------------------------- */
-
-export function schemaDoEvento(evento: Evento) {
-  return limpar({
-    '@context': 'https://schema.org',
-    '@type': 'Event',
-    '@id': `${URL_SITE}/agenda#${evento.slug ?? evento.id}`,
-    name: evento.nome,
-    description: evento.descricao,
-    startDate: evento.data,
-    endDate: evento.dataFim ?? undefined,
-    eventStatus: 'https://schema.org/EventScheduled',
-    eventAttendanceMode:
-      evento.tipo === 'online'
-        ? 'https://schema.org/OnlineEventAttendanceMode'
-        : 'https://schema.org/OfflineEventAttendanceMode',
-    location:
-      evento.tipo === 'online'
-        ? { '@type': 'VirtualLocation', url: evento.linkInscricao ?? URL_SITE }
-        : limpar({
-            '@type': 'Place',
-            name: evento.local ?? evento.cidade ?? undefined,
-            address: limpar({
-              '@type': 'PostalAddress',
-              streetAddress: evento.endereco ?? undefined,
-              addressLocality: evento.cidade ?? undefined,
-              addressRegion: evento.estado ?? undefined,
-              addressCountry: 'BR',
-            }),
-          }),
-    image: imagemAbsoluta(evento.destaque?.imagem as Relacao<Midia>, 'compartilhamento'),
-    organizer: evento.organizador
-      ? { '@type': 'Organization', name: evento.organizador }
-      : { '@id': ID_PUBLICACAO },
-    url: evento.linkInscricao ?? `${URL_SITE}/agenda`,
-    inLanguage: 'pt-BR',
-  })
-}
 
 /* -------------------------------------------------------------------------- */
 /* Blocos auxiliares                                                           */

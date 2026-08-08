@@ -18,7 +18,7 @@ export const Inscricoes: CollectionConfig = {
   admin: {
     useAsTitle: 'email',
     defaultColumns: ['email', 'origem', 'statusBeehiiv', 'createdAt'],
-    group: 'Configuração',
+    group: 'Bastidores',
     description:
       'Espelho local das inscrições. A lista oficial continua no beehiiv — isto é rede de segurança.',
   },

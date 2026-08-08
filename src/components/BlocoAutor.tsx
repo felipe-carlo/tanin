@@ -1,17 +1,16 @@
 import Link from 'next/link'
 
 import { Imagem } from '@/components/Imagem'
-import { NOMES_DE_REDE } from '@/lib/site'
-import type { Autor } from '@/payload-types'
+import { NOMES_DE_REDE, type Autora } from '@/lib/site'
 
 /**
  * Assinatura no pé do texto.
  *
  * Não é vaidade: é o bloco que responde "quem está me dizendo isto?". Buscadores e
  * IAs pesam autoria identificável, e leitor também — sobretudo quando o texto opina
- * sobre o que vale o próprio dinheiro.
+ * sobre o que vale o próprio dinheiro. A ficha vem do global de configurações.
  */
-export function BlocoAutor({ autor }: { autor: Autor }) {
+export function BlocoAutor({ autor }: { autor: Autora }) {
   const temFoto = autor.foto && typeof autor.foto === 'object'
 
   return (

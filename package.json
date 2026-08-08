@@ -22,7 +22,7 @@
     "generate:types": "payload generate:types",
     "generate:importmap": "payload generate:importmap",
     "payload": "payload",
-    "seed": "tsx scripts/semear.ts",
+    "semear": "tsx scripts/semear.ts",
     "importar:beehiiv": "tsx scripts/importar-beehiiv.ts"
   },
   "dependencies": {

@@ -67,17 +67,8 @@ export interface Config {
   };
   blocks: {};
   collections: {
-    materias: Materia;
-    edicoes: Edicao;
+    textos: Texto;
     vinhos: Vinho;
-    guias: Guia;
-    eventos: Evento;
-    autores: Autor;
-    categorias: Categoria;
-    tags: Tag;
-    uvas: Uva;
-    regioes: Regiao;
-    importadoras: Importadora;
     midia: Midia;
     inscricoes: Inscricao;
     usuarios: Usuario;
@@ -89,17 +80,8 @@ export interface Config {
   };
   collectionsJoins: {};
   collectionsSelect: {
-    materias: MateriasSelect<false> | MateriasSelect<true>;
-    edicoes: EdicoesSelect<false> | EdicoesSelect<true>;
+    textos: TextosSelect<false> | TextosSelect<true>;
     vinhos: VinhosSelect<false> | VinhosSelect<true>;
-    guias: GuiasSelect<false> | GuiasSelect<true>;
-    eventos: EventosSelect<false> | EventosSelect<true>;
-    autores: AutoresSelect<false> | AutoresSelect<true>;
-    categorias: CategoriasSelect<false> | CategoriasSelect<true>;
-    tags: TagsSelect<false> | TagsSelect<true>;
-    uvas: UvasSelect<false> | UvasSelect<true>;
-    regioes: RegioesSelect<false> | RegioesSelect<true>;
-    importadoras: ImportadorasSelect<false> | ImportadorasSelect<true>;
     midia: MidiaSelect<false> | MidiaSelect<true>;
     inscricoes: InscricoesSelect<false> | InscricoesSelect<true>;
     usuarios: UsuariosSelect<false> | UsuariosSelect<true>;
@@ -154,12 +136,12 @@ export interface UsuarioAuthOperations {
   };
 }
 /**
- * O jornalismo do portal: reportagens, ensaios, entrevistas.
+ * Tudo que se escreve: matérias, edições do boletim e guias. A seção, na lateral, decide onde o texto aparece.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "materias".
+ * via the `definition` "textos".
  */
-export interface Materia {
+export interface Texto {
   id: number;
   titulo: string;
   /**
@@ -169,15 +151,7 @@ export interface Materia {
   /**
    * De 40 a 60 palavras, escritas para fazer sentido sozinhas, fora da página. É o trecho que buscadores e IAs vão citar.
    */
-  resumo: string;
-  destaque?: {
-    imagem?: (number | null) | Midia;
-    /**
-     * Fotógrafo, ilustrador ou origem. Aparece embaixo da imagem.
-     */
-    credito?: string | null;
-    legenda?: string | null;
-  };
+  resumo?: string | null;
   corpo: {
     root: {
       type: string;
@@ -194,11 +168,14 @@ export interface Materia {
     [k: string]: unknown;
   };
   /**
-   * Viram cartões no fim da matéria e ligam a ficha ao texto.
+   * Três a cinco frases curtas e auto-contidas. Abrem o guia e são o pedaço mais citável da página.
    */
-  vinhosRelacionados?: (number | Vinho)[] | null;
-  materiasRelacionadas?: (number | Materia)[] | null;
-  guiasRelacionados?: (number | Guia)[] | null;
+  paraLevar?:
+    | {
+        texto: string;
+        id?: string | null;
+      }[]
+    | null;
   /**
    * Cada par vira um bloco no fim da página e entra no código que o Google e as IAs leem. Responda de forma auto-contida, sem depender do resto do texto.
    */
@@ -239,13 +216,33 @@ export interface Materia {
     canonica?: string | null;
   };
   /**
-   * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
+   * Decide onde o texto mora no site: /materias, /boletim ou /guias.
    */
-  slug?: string | null;
-  indiceBusca?: string | null;
-  autor: number | Autor;
-  categoria: number | Categoria;
-  tags?: (number | Tag)[] | null;
+  secao: 'materia' | 'boletim' | 'guia';
+  /**
+   * Opcional. Sem editoria, a matéria aparece só no recorte "Tudo".
+   */
+  categoria?: ('reportagem' | 'ensaio' | 'entrevista' | 'degustacao' | 'mercado' | 'cultura') | null;
+  /**
+   * Se ficar vazio, entra como "Tema técnico".
+   */
+  tipoGuia?: ('uva' | 'regiao' | 'harmonizacao' | 'servico' | 'compra' | 'tecnico') | null;
+  /**
+   * Se ficar vazio, entra como "Iniciante".
+   */
+  nivel?: ('iniciante' | 'intermediario') | null;
+  /**
+   * Numerada sozinha ao publicar: a próxima edição é sempre a maior + 1.
+   */
+  numero?: number | null;
+  destaque?: {
+    imagem?: (number | null) | Midia;
+    /**
+     * Fotógrafo, ilustrador ou origem. Aparece embaixo da imagem.
+     */
+    credito?: string | null;
+    legenda?: string | null;
+  };
   /**
    * A faixa da escala cromática do vinho que representa este conteúdo. É o que dá cor ao cartão, à fita do boletim e aos filtros.
    */
@@ -280,9 +277,34 @@ export interface Materia {
    */
   destaqueHome?: boolean | null;
   /**
+   * Vinhos citados viram cartões; textos viram o "leia também".
+   */
+  relacionados?:
+    | (
+        | {
+            relationTo: 'textos';
+            value: number | Texto;
+          }
+        | {
+            relationTo: 'vinhos';
+            value: number | Vinho;
+          }
+      )[]
+    | null;
+  /**
+   * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
+   */
+  slug?: string | null;
+  indiceBusca?: string | null;
+  /**
    * Calculado sozinho a partir do corpo.
    */
   tempoLeitura?: number | null;
+  /**
+   * Preenchido pela importação. Serve para apontar a canônica do beehiiv de volta para cá.
+   */
+  urlBeehiiv?: string | null;
+  importadaEm?: string | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -378,9 +400,9 @@ export interface Midia {
 export interface Vinho {
   id: number;
   nome: string;
-  produtor: string;
-  pais: string;
-  regiao?: (number | null) | Regiao;
+  produtor?: string | null;
+  pais?: string | null;
+  regiao?: string | null;
   subRegiao?: string | null;
   /**
    * Deixe vazio para vinhos sem safra.
@@ -408,11 +430,11 @@ export interface Vinho {
     | 'granada'
     | 'tawny';
   /**
-   * Deixe o percentual vazio quando o produtor não informa.
+   * Escreva o nome da uva. Deixe o percentual vazio quando o produtor não informa.
    */
   uvas?:
     | {
-        uva: number | Uva;
+        uva: string;
         percentual?: number | null;
         id?: string | null;
       }[]
@@ -432,7 +454,7 @@ export interface Vinho {
   /**
    * Duas ou três frases que se sustentam sozinhas, fora da página. É o trecho que buscadores e IAs vão citar quando alguém perguntar sobre este vinho.
    */
-  veredito: string;
+  veredito?: string | null;
   notasDegustacao?: {
     root: {
       type: string;
@@ -459,12 +481,54 @@ export interface Vinho {
   potencialGuarda?: string | null;
   tacaRecomendada?: string | null;
   decantacao?: string | null;
+  /**
+   * Cada par vira um bloco no fim da página e entra no código que o Google e as IAs leem. Responda de forma auto-contida, sem depender do resto do texto.
+   */
+  faq?:
+    | {
+        pergunta: string;
+        resposta: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Opcional. Se ficar em branco, usamos o título, o resumo e a imagem de destaque da própria página.
+   */
+  seo?: {
+    /**
+     * Até 70 caracteres. Aparece na aba do navegador e no resultado do Google.
+     */
+    titulo?: string | null;
+    /**
+     * Até 165 caracteres. É o parágrafo cinza embaixo do link no Google.
+     */
+    descricao?: string | null;
+    /**
+     * A imagem que aparece quando o link é colado no WhatsApp, Instagram ou X.
+     */
+    imagem?: (number | null) | Midia;
+    /**
+     * Separe por vírgula. Não vai para a meta keywords (que morreu) — serve de guia editorial e alimenta a busca interna.
+     */
+    palavrasChave?: string | null;
+    /**
+     * Use com muita parcimônia. O portal inteiro depende de ser encontrado.
+     */
+    naoIndexar?: boolean | null;
+    /**
+     * Só preencha se este conteúdo foi publicado antes em outro lugar e aquele endereço deve continuar sendo o oficial.
+     */
+    canonica?: string | null;
+  };
   faixaPreco?: ('ate-80' | '80-150' | '150-250' | '250-400' | '400-700' | 'acima-700') | null;
   /**
    * Aparece na ficha, para o leitor saber o quanto a faixa está fresca.
    */
   dataPreco?: string | null;
-  importadora?: (number | null) | Importadora;
+  importadora?: {
+    nome?: string | null;
+    url?: string | null;
+  };
   /**
    * Links informativos, sem afiliação. Se algum dia houver afiliação, marque abaixo — a transparência é parte da credibilidade.
    */
@@ -476,141 +540,19 @@ export interface Vinho {
         id?: string | null;
       }[]
     | null;
-  materiasRelacionadas?: (number | Materia)[] | null;
-  vinhosSimilares?: (number | Vinho)[] | null;
-  guiasRelacionados?: (number | Guia)[] | null;
-  /**
-   * Cada par vira um bloco no fim da página e entra no código que o Google e as IAs leem. Responda de forma auto-contida, sem depender do resto do texto.
-   */
-  faq?:
-    | {
-        pergunta: string;
-        resposta: string;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Opcional. Se ficar em branco, usamos o título, o resumo e a imagem de destaque da própria página.
-   */
-  seo?: {
-    /**
-     * Até 70 caracteres. Aparece na aba do navegador e no resultado do Google.
-     */
-    titulo?: string | null;
-    /**
-     * Até 165 caracteres. É o parágrafo cinza embaixo do link no Google.
-     */
-    descricao?: string | null;
-    /**
-     * A imagem que aparece quando o link é colado no WhatsApp, Instagram ou X.
-     */
-    imagem?: (number | null) | Midia;
-    /**
-     * Separe por vírgula. Não vai para a meta keywords (que morreu) — serve de guia editorial e alimenta a busca interna.
-     */
-    palavrasChave?: string | null;
-    /**
-     * Use com muita parcimônia. O portal inteiro depende de ser encontrado.
-     */
-    naoIndexar?: boolean | null;
-    /**
-     * Só preencha se este conteúdo foi publicado antes em outro lugar e aquele endereço deve continuar sendo o oficial.
-     */
-    canonica?: string | null;
-  };
   /**
    * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
    */
   slug?: string | null;
   indiceBusca?: string | null;
-  autor: number | Autor;
-  tags?: (number | Tag)[] | null;
   /**
-   * Deixe uma data futura para agendar. O conteúdo só aparece no site depois dela.
+   * Vinhos parecidos e textos que citam esta garrafa.
    */
-  dataPublicacao?: string | null;
-  /**
-   * Aparece nas páginas evergreen. Atualize quando revisar o conteúdo.
-   */
-  dataAtualizacao?: string | null;
-  updatedAt: string;
-  createdAt: string;
-  _status?: ('draft' | 'published') | null;
-}
-/**
- * Regiões e denominações. Cada uma vira um filtro e pode ter um guia próprio.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "regioes".
- */
-export interface Regiao {
-  id: number;
-  nome: string;
-  /**
-   * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
-   */
-  slug?: string | null;
-  pais: string;
-  descricao?: string | null;
-  guia?: (number | null) | Guia;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Conteúdo que não vence. É o que sustenta o tráfego de busca e o que as IAs citam como referência.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "guias".
- */
-export interface Guia {
-  id: number;
-  titulo: string;
-  subtitulo?: string | null;
-  /**
-   * De 40 a 60 palavras, escritas para fazer sentido sozinhas, fora da página. É o trecho que buscadores e IAs vão citar.
-   */
-  resumo: string;
-  destaque?: {
-    imagem?: (number | null) | Midia;
-    /**
-     * Fotógrafo, ilustrador ou origem. Aparece embaixo da imagem.
-     */
-    credito?: string | null;
-    legenda?: string | null;
-  };
-  corpo: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  };
-  /**
-   * Três a cinco frases curtas e auto-contidas. Abrem o guia e são o pedaço mais citável da página.
-   */
-  paraLevar?:
-    | {
-        texto: string;
-        id?: string | null;
-      }[]
-    | null;
-  conteudosRelacionados?:
+  relacionados?:
     | (
         | {
-            relationTo: 'materias';
-            value: number | Materia;
-          }
-        | {
-            relationTo: 'guias';
-            value: number | Guia;
+            relationTo: 'textos';
+            value: number | Texto;
           }
         | {
             relationTo: 'vinhos';
@@ -618,76 +560,6 @@ export interface Guia {
           }
       )[]
     | null;
-  vinhosExemplo?: (number | Vinho)[] | null;
-  /**
-   * Cada par vira um bloco no fim da página e entra no código que o Google e as IAs leem. Responda de forma auto-contida, sem depender do resto do texto.
-   */
-  faq?:
-    | {
-        pergunta: string;
-        resposta: string;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Opcional. Se ficar em branco, usamos o título, o resumo e a imagem de destaque da própria página.
-   */
-  seo?: {
-    /**
-     * Até 70 caracteres. Aparece na aba do navegador e no resultado do Google.
-     */
-    titulo?: string | null;
-    /**
-     * Até 165 caracteres. É o parágrafo cinza embaixo do link no Google.
-     */
-    descricao?: string | null;
-    /**
-     * A imagem que aparece quando o link é colado no WhatsApp, Instagram ou X.
-     */
-    imagem?: (number | null) | Midia;
-    /**
-     * Separe por vírgula. Não vai para a meta keywords (que morreu) — serve de guia editorial e alimenta a busca interna.
-     */
-    palavrasChave?: string | null;
-    /**
-     * Use com muita parcimônia. O portal inteiro depende de ser encontrado.
-     */
-    naoIndexar?: boolean | null;
-    /**
-     * Só preencha se este conteúdo foi publicado antes em outro lugar e aquele endereço deve continuar sendo o oficial.
-     */
-    canonica?: string | null;
-  };
-  /**
-   * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
-   */
-  slug?: string | null;
-  indiceBusca?: string | null;
-  tipoGuia: 'uva' | 'regiao' | 'harmonizacao' | 'servico' | 'compra' | 'tecnico';
-  nivel: 'iniciante' | 'intermediario';
-  autor: number | Autor;
-  tags?: (number | Tag)[] | null;
-  /**
-   * A faixa da escala cromática do vinho que representa este conteúdo. É o que dá cor ao cartão, à fita do boletim e aos filtros.
-   */
-  chipCor?:
-    | (
-        | 'verde-palha'
-        | 'palha'
-        | 'ouro'
-        | 'ouro-velho'
-        | 'ambar'
-        | 'laranja'
-        | 'rosa-palido'
-        | 'salmao'
-        | 'cobre'
-        | 'cereja'
-        | 'rubi'
-        | 'purpura'
-        | 'granada'
-        | 'tawny'
-      )
-    | null;
   /**
    * Deixe uma data futura para agendar. O conteúdo só aparece no site depois dela.
    */
@@ -696,435 +568,6 @@ export interface Guia {
    * Aparece nas páginas evergreen. Atualize quando revisar o conteúdo.
    */
   dataAtualizacao?: string | null;
-  updatedAt: string;
-  createdAt: string;
-  _status?: ('draft' | 'published') | null;
-}
-/**
- * Quem assina o conteúdo. A ficha alimenta a página /sobre e o schema Person.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "autores".
- */
-export interface Autor {
-  id: number;
-  nome: string;
-  /**
-   * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
-   */
-  slug?: string | null;
-  /**
-   * Ex.: "Jornalista de vinho e criadora da Tanin".
-   */
-  cargo?: string | null;
-  /**
-   * Uma ou duas frases. Aparece no pé das matérias.
-   */
-  bioCurta?: string | null;
-  /**
-   * Texto completo da página /sobre.
-   */
-  bioLonga?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  foto?: (number | null) | Midia;
-  /**
-   * Formação, certificações, prêmios e veículos onde publicou. É o que sustenta a autoridade do portal aos olhos do Google e das IAs.
-   */
-  credenciais?:
-    | {
-        texto: string;
-        ano?: string | null;
-        link?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Entram no `sameAs` do schema — é assim que buscadores ligam a pessoa aos perfis dela.
-   */
-  redes?:
-    | {
-        rede: 'instagram' | 'linkedin' | 'youtube' | 'x' | 'tiktok' | 'site' | 'outro';
-        url: string;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Opcional. Aparece na página /sobre se preenchido.
-   */
-  email?: string | null;
-  /**
-   * Opcional. Se ficar em branco, usamos o título, o resumo e a imagem de destaque da própria página.
-   */
-  seo?: {
-    /**
-     * Até 70 caracteres. Aparece na aba do navegador e no resultado do Google.
-     */
-    titulo?: string | null;
-    /**
-     * Até 165 caracteres. É o parágrafo cinza embaixo do link no Google.
-     */
-    descricao?: string | null;
-    /**
-     * A imagem que aparece quando o link é colado no WhatsApp, Instagram ou X.
-     */
-    imagem?: (number | null) | Midia;
-    /**
-     * Separe por vírgula. Não vai para a meta keywords (que morreu) — serve de guia editorial e alimenta a busca interna.
-     */
-    palavrasChave?: string | null;
-    /**
-     * Use com muita parcimônia. O portal inteiro depende de ser encontrado.
-     */
-    naoIndexar?: boolean | null;
-    /**
-     * Só preencha se este conteúdo foi publicado antes em outro lugar e aquele endereço deve continuar sendo o oficial.
-     */
-    canonica?: string | null;
-  };
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Assuntos livres. Servem para relacionar conteúdo, não para navegar.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "tags".
- */
-export interface Tag {
-  id: number;
-  nome: string;
-  /**
-   * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
-   */
-  slug?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * O vocabulário de castas. Cada uva vira um filtro no índice de vinhos.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "uvas".
- */
-export interface Uva {
-  id: number;
-  nome: string;
-  /**
-   * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
-   */
-  slug?: string | null;
-  cor?: ('tinta' | 'branca') | null;
-  /**
-   * Separados por vírgula. Ex.: Syrah, Shiraz.
-   */
-  sinonimos?: string | null;
-  descricao?: string | null;
-  /**
-   * Se existir um guia dedicado, ligue aqui — vira link nas fichas.
-   */
-  guia?: (number | null) | Guia;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Quem traz o vinho para o Brasil. Aparece na ficha e ajuda o leitor a encontrar a garrafa.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "importadoras".
- */
-export interface Importadora {
-  id: number;
-  nome: string;
-  /**
-   * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
-   */
-  slug?: string | null;
-  site?: string | null;
-  cidade?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * As editorias do portal. Poucas e estáveis — categoria demais é o mesmo que nenhuma.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categorias".
- */
-export interface Categoria {
-  id: number;
-  nome: string;
-  /**
-   * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
-   */
-  slug?: string | null;
-  descricao?: string | null;
-  /**
-   * A faixa da escala cromática do vinho que representa este conteúdo. É o que dá cor ao cartão, à fita do boletim e aos filtros.
-   */
-  chipCor?:
-    | (
-        | 'verde-palha'
-        | 'palha'
-        | 'ouro'
-        | 'ouro-velho'
-        | 'ambar'
-        | 'laranja'
-        | 'rosa-palido'
-        | 'salmao'
-        | 'cobre'
-        | 'cereja'
-        | 'rubi'
-        | 'purpura'
-        | 'granada'
-        | 'tawny'
-      )
-    | null;
-  ordem?: number | null;
-  /**
-   * Opcional. Se ficar em branco, usamos o título, o resumo e a imagem de destaque da própria página.
-   */
-  seo?: {
-    /**
-     * Até 70 caracteres. Aparece na aba do navegador e no resultado do Google.
-     */
-    titulo?: string | null;
-    /**
-     * Até 165 caracteres. É o parágrafo cinza embaixo do link no Google.
-     */
-    descricao?: string | null;
-    /**
-     * A imagem que aparece quando o link é colado no WhatsApp, Instagram ou X.
-     */
-    imagem?: (number | null) | Midia;
-    /**
-     * Separe por vírgula. Não vai para a meta keywords (que morreu) — serve de guia editorial e alimenta a busca interna.
-     */
-    palavrasChave?: string | null;
-    /**
-     * Use com muita parcimônia. O portal inteiro depende de ser encontrado.
-     */
-    naoIndexar?: boolean | null;
-    /**
-     * Só preencha se este conteúdo foi publicado antes em outro lugar e aquele endereço deve continuar sendo o oficial.
-     */
-    canonica?: string | null;
-  };
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * O arquivo do Boletim. Cada edição vira uma página própria e uma faixa na fita cromática.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "edicoes".
- */
-export interface Edicao {
-  id: number;
-  titulo: string;
-  subtitulo?: string | null;
-  /**
-   * De 40 a 60 palavras, escritas para fazer sentido sozinhas, fora da página. É o trecho que buscadores e IAs vão citar.
-   */
-  resumo: string;
-  destaque?: {
-    imagem?: (number | null) | Midia;
-    /**
-     * Fotógrafo, ilustrador ou origem. Aparece embaixo da imagem.
-     */
-    credito?: string | null;
-    legenda?: string | null;
-  };
-  corpo: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  };
-  blocos?:
-    | {
-        titulo: string;
-        /**
-         * Preenchida sozinha a partir do título. É o que vem depois do # no endereço.
-         */
-        ancora?: string | null;
-        resumo?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Opcional. Se ficar em branco, usamos o título, o resumo e a imagem de destaque da própria página.
-   */
-  seo?: {
-    /**
-     * Até 70 caracteres. Aparece na aba do navegador e no resultado do Google.
-     */
-    titulo?: string | null;
-    /**
-     * Até 165 caracteres. É o parágrafo cinza embaixo do link no Google.
-     */
-    descricao?: string | null;
-    /**
-     * A imagem que aparece quando o link é colado no WhatsApp, Instagram ou X.
-     */
-    imagem?: (number | null) | Midia;
-    /**
-     * Separe por vírgula. Não vai para a meta keywords (que morreu) — serve de guia editorial e alimenta a busca interna.
-     */
-    palavrasChave?: string | null;
-    /**
-     * Use com muita parcimônia. O portal inteiro depende de ser encontrado.
-     */
-    naoIndexar?: boolean | null;
-    /**
-     * Só preencha se este conteúdo foi publicado antes em outro lugar e aquele endereço deve continuar sendo o oficial.
-     */
-    canonica?: string | null;
-  };
-  /**
-   * Vira o número gigante da página, à maneira de revista.
-   */
-  numero: number;
-  /**
-   * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
-   */
-  slug?: string | null;
-  indiceBusca?: string | null;
-  dataEnvio: string;
-  dataPublicacao?: string | null;
-  /**
-   * A faixa da escala cromática do vinho que representa este conteúdo. É o que dá cor ao cartão, à fita do boletim e aos filtros.
-   */
-  chipCor?:
-    | (
-        | 'verde-palha'
-        | 'palha'
-        | 'ouro'
-        | 'ouro-velho'
-        | 'ambar'
-        | 'laranja'
-        | 'rosa-palido'
-        | 'salmao'
-        | 'cobre'
-        | 'cereja'
-        | 'rubi'
-        | 'purpura'
-        | 'granada'
-        | 'tawny'
-      )
-    | null;
-  /**
-   * Preenchido pela importação. Serve para apontar a canônica do beehiiv de volta para cá.
-   */
-  urlBeehiiv?: string | null;
-  importadaEm?: string | null;
-  updatedAt: string;
-  createdAt: string;
-  _status?: ('draft' | 'published') | null;
-}
-/**
- * A agenda de vinho. Eventos passados somem da listagem sozinhos.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "eventos".
- */
-export interface Evento {
-  id: number;
-  nome: string;
-  /**
-   * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
-   */
-  slug?: string | null;
-  data: string;
-  dataFim?: string | null;
-  local?: string | null;
-  cidade?: string | null;
-  estado?: string | null;
-  endereco?: string | null;
-  tipo: 'degustacao' | 'feira' | 'jantar' | 'curso' | 'lancamento' | 'online';
-  descricao: string;
-  linkInscricao?: string | null;
-  preco?: string | null;
-  organizador?: string | null;
-  destaque?: {
-    imagem?: (number | null) | Midia;
-    /**
-     * Fotógrafo, ilustrador ou origem. Aparece embaixo da imagem.
-     */
-    credito?: string | null;
-    legenda?: string | null;
-  };
-  /**
-   * A faixa da escala cromática do vinho que representa este conteúdo. É o que dá cor ao cartão, à fita do boletim e aos filtros.
-   */
-  chipCor?:
-    | (
-        | 'verde-palha'
-        | 'palha'
-        | 'ouro'
-        | 'ouro-velho'
-        | 'ambar'
-        | 'laranja'
-        | 'rosa-palido'
-        | 'salmao'
-        | 'cobre'
-        | 'cereja'
-        | 'rubi'
-        | 'purpura'
-        | 'granada'
-        | 'tawny'
-      )
-    | null;
-  /**
-   * Opcional. Se ficar em branco, usamos o título, o resumo e a imagem de destaque da própria página.
-   */
-  seo?: {
-    /**
-     * Até 70 caracteres. Aparece na aba do navegador e no resultado do Google.
-     */
-    titulo?: string | null;
-    /**
-     * Até 165 caracteres. É o parágrafo cinza embaixo do link no Google.
-     */
-    descricao?: string | null;
-    /**
-     * A imagem que aparece quando o link é colado no WhatsApp, Instagram ou X.
-     */
-    imagem?: (number | null) | Midia;
-    /**
-     * Separe por vírgula. Não vai para a meta keywords (que morreu) — serve de guia editorial e alimenta a busca interna.
-     */
-    palavrasChave?: string | null;
-    /**
-     * Use com muita parcimônia. O portal inteiro depende de ser encontrado.
-     */
-    naoIndexar?: boolean | null;
-    /**
-     * Só preencha se este conteúdo foi publicado antes em outro lugar e aquele endereço deve continuar sendo o oficial.
-     */
-    canonica?: string | null;
-  };
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -1149,6 +592,8 @@ export interface Inscricao {
   createdAt: string;
 }
 /**
+ * Quem pode entrar no painel. Não confunda com a ficha pública da autora, que mora em Configurações.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "usuarios".
  */
@@ -1159,10 +604,6 @@ export interface Usuario {
    * Administrador mexe em tudo, inclusive em usuários. Editor escreve e publica conteúdo.
    */
   papel: 'administrador' | 'editor';
-  /**
-   * Liga este login à ficha pública de autoria, que aparece nas matérias.
-   */
-  autor?: (number | null) | Autor;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -1299,48 +740,12 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
-        relationTo: 'materias';
-        value: number | Materia;
-      } | null)
-    | ({
-        relationTo: 'edicoes';
-        value: number | Edicao;
+        relationTo: 'textos';
+        value: number | Texto;
       } | null)
     | ({
         relationTo: 'vinhos';
         value: number | Vinho;
-      } | null)
-    | ({
-        relationTo: 'guias';
-        value: number | Guia;
-      } | null)
-    | ({
-        relationTo: 'eventos';
-        value: number | Evento;
-      } | null)
-    | ({
-        relationTo: 'autores';
-        value: number | Autor;
-      } | null)
-    | ({
-        relationTo: 'categorias';
-        value: number | Categoria;
-      } | null)
-    | ({
-        relationTo: 'tags';
-        value: number | Tag;
-      } | null)
-    | ({
-        relationTo: 'uvas';
-        value: number | Uva;
-      } | null)
-    | ({
-        relationTo: 'regioes';
-        value: number | Regiao;
-      } | null)
-    | ({
-        relationTo: 'importadoras';
-        value: number | Importadora;
       } | null)
     | ({
         relationTo: 'midia';
@@ -1398,23 +803,19 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "materias_select".
+ * via the `definition` "textos_select".
  */
-export interface MateriasSelect<T extends boolean = true> {
+export interface TextosSelect<T extends boolean = true> {
   titulo?: T;
   subtitulo?: T;
   resumo?: T;
-  destaque?:
+  corpo?: T;
+  paraLevar?:
     | T
     | {
-        imagem?: T;
-        credito?: T;
-        legenda?: T;
+        texto?: T;
+        id?: T;
       };
-  corpo?: T;
-  vinhosRelacionados?: T;
-  materiasRelacionadas?: T;
-  guiasRelacionados?: T;
   faq?:
     | T
     | {
@@ -1432,28 +833,11 @@ export interface MateriasSelect<T extends boolean = true> {
         naoIndexar?: T;
         canonica?: T;
       };
-  slug?: T;
-  indiceBusca?: T;
-  autor?: T;
+  secao?: T;
   categoria?: T;
-  tags?: T;
-  chipCor?: T;
-  dataPublicacao?: T;
-  dataAtualizacao?: T;
-  destaqueHome?: T;
-  tempoLeitura?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  _status?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "edicoes_select".
- */
-export interface EdicoesSelect<T extends boolean = true> {
-  titulo?: T;
-  subtitulo?: T;
-  resumo?: T;
+  tipoGuia?: T;
+  nivel?: T;
+  numero?: T;
   destaque?:
     | T
     | {
@@ -1461,31 +845,14 @@ export interface EdicoesSelect<T extends boolean = true> {
         credito?: T;
         legenda?: T;
       };
-  corpo?: T;
-  blocos?:
-    | T
-    | {
-        titulo?: T;
-        ancora?: T;
-        resumo?: T;
-        id?: T;
-      };
-  seo?:
-    | T
-    | {
-        titulo?: T;
-        descricao?: T;
-        imagem?: T;
-        palavrasChave?: T;
-        naoIndexar?: T;
-        canonica?: T;
-      };
-  numero?: T;
+  chipCor?: T;
+  dataPublicacao?: T;
+  dataAtualizacao?: T;
+  destaqueHome?: T;
+  relacionados?: T;
   slug?: T;
   indiceBusca?: T;
-  dataEnvio?: T;
-  dataPublicacao?: T;
-  chipCor?: T;
+  tempoLeitura?: T;
   urlBeehiiv?: T;
   importadaEm?: T;
   updatedAt?: T;
@@ -1535,9 +902,31 @@ export interface VinhosSelect<T extends boolean = true> {
   potencialGuarda?: T;
   tacaRecomendada?: T;
   decantacao?: T;
+  faq?:
+    | T
+    | {
+        pergunta?: T;
+        resposta?: T;
+        id?: T;
+      };
+  seo?:
+    | T
+    | {
+        titulo?: T;
+        descricao?: T;
+        imagem?: T;
+        palavrasChave?: T;
+        naoIndexar?: T;
+        canonica?: T;
+      };
   faixaPreco?: T;
   dataPreco?: T;
-  importadora?: T;
+  importadora?:
+    | T
+    | {
+        nome?: T;
+        url?: T;
+      };
   ondeComprar?:
     | T
     | {
@@ -1546,241 +935,14 @@ export interface VinhosSelect<T extends boolean = true> {
         afiliado?: T;
         id?: T;
       };
-  materiasRelacionadas?: T;
-  vinhosSimilares?: T;
-  guiasRelacionados?: T;
-  faq?:
-    | T
-    | {
-        pergunta?: T;
-        resposta?: T;
-        id?: T;
-      };
-  seo?:
-    | T
-    | {
-        titulo?: T;
-        descricao?: T;
-        imagem?: T;
-        palavrasChave?: T;
-        naoIndexar?: T;
-        canonica?: T;
-      };
   slug?: T;
   indiceBusca?: T;
-  autor?: T;
-  tags?: T;
+  relacionados?: T;
   dataPublicacao?: T;
   dataAtualizacao?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "guias_select".
- */
-export interface GuiasSelect<T extends boolean = true> {
-  titulo?: T;
-  subtitulo?: T;
-  resumo?: T;
-  destaque?:
-    | T
-    | {
-        imagem?: T;
-        credito?: T;
-        legenda?: T;
-      };
-  corpo?: T;
-  paraLevar?:
-    | T
-    | {
-        texto?: T;
-        id?: T;
-      };
-  conteudosRelacionados?: T;
-  vinhosExemplo?: T;
-  faq?:
-    | T
-    | {
-        pergunta?: T;
-        resposta?: T;
-        id?: T;
-      };
-  seo?:
-    | T
-    | {
-        titulo?: T;
-        descricao?: T;
-        imagem?: T;
-        palavrasChave?: T;
-        naoIndexar?: T;
-        canonica?: T;
-      };
-  slug?: T;
-  indiceBusca?: T;
-  tipoGuia?: T;
-  nivel?: T;
-  autor?: T;
-  tags?: T;
-  chipCor?: T;
-  dataPublicacao?: T;
-  dataAtualizacao?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  _status?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "eventos_select".
- */
-export interface EventosSelect<T extends boolean = true> {
-  nome?: T;
-  slug?: T;
-  data?: T;
-  dataFim?: T;
-  local?: T;
-  cidade?: T;
-  estado?: T;
-  endereco?: T;
-  tipo?: T;
-  descricao?: T;
-  linkInscricao?: T;
-  preco?: T;
-  organizador?: T;
-  destaque?:
-    | T
-    | {
-        imagem?: T;
-        credito?: T;
-        legenda?: T;
-      };
-  chipCor?: T;
-  seo?:
-    | T
-    | {
-        titulo?: T;
-        descricao?: T;
-        imagem?: T;
-        palavrasChave?: T;
-        naoIndexar?: T;
-        canonica?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-  _status?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "autores_select".
- */
-export interface AutoresSelect<T extends boolean = true> {
-  nome?: T;
-  slug?: T;
-  cargo?: T;
-  bioCurta?: T;
-  bioLonga?: T;
-  foto?: T;
-  credenciais?:
-    | T
-    | {
-        texto?: T;
-        ano?: T;
-        link?: T;
-        id?: T;
-      };
-  redes?:
-    | T
-    | {
-        rede?: T;
-        url?: T;
-        id?: T;
-      };
-  email?: T;
-  seo?:
-    | T
-    | {
-        titulo?: T;
-        descricao?: T;
-        imagem?: T;
-        palavrasChave?: T;
-        naoIndexar?: T;
-        canonica?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categorias_select".
- */
-export interface CategoriasSelect<T extends boolean = true> {
-  nome?: T;
-  slug?: T;
-  descricao?: T;
-  chipCor?: T;
-  ordem?: T;
-  seo?:
-    | T
-    | {
-        titulo?: T;
-        descricao?: T;
-        imagem?: T;
-        palavrasChave?: T;
-        naoIndexar?: T;
-        canonica?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "tags_select".
- */
-export interface TagsSelect<T extends boolean = true> {
-  nome?: T;
-  slug?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "uvas_select".
- */
-export interface UvasSelect<T extends boolean = true> {
-  nome?: T;
-  slug?: T;
-  cor?: T;
-  sinonimos?: T;
-  descricao?: T;
-  guia?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "regioes_select".
- */
-export interface RegioesSelect<T extends boolean = true> {
-  nome?: T;
-  slug?: T;
-  pais?: T;
-  descricao?: T;
-  guia?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "importadoras_select".
- */
-export interface ImportadorasSelect<T extends boolean = true> {
-  nome?: T;
-  slug?: T;
-  site?: T;
-  cidade?: T;
-  updatedAt?: T;
-  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1886,7 +1048,6 @@ export interface InscricoesSelect<T extends boolean = true> {
 export interface UsuariosSelect<T extends boolean = true> {
   nome?: T;
   papel?: T;
-  autor?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1994,9 +1155,63 @@ export interface Configuracoes {
   descricao?: string | null;
   imagemPadrao?: (number | null) | Midia;
   /**
-   * Quem assina a publicação. Alimenta a página /sobre e o schema.
+   * A ficha pública da autora. Alimenta a página /sobre, o pé das matérias e o schema Person que buscadores e IAs leem.
    */
-  autoraPrincipal?: (number | null) | Autor;
+  autora?: {
+    nome?: string | null;
+    /**
+     * Ex.: "Jornalista de vinho e criadora da Tanin".
+     */
+    cargo?: string | null;
+    foto?: (number | null) | Midia;
+    /**
+     * Uma ou duas frases. Aparece no pé das matérias.
+     */
+    bioCurta?: string | null;
+    /**
+     * Texto completo da página /sobre.
+     */
+    bioLonga?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+    /**
+     * Formação, certificações, prêmios e veículos onde publicou. É o que sustenta a autoridade do portal aos olhos do Google e das IAs.
+     */
+    credenciais?:
+      | {
+          texto: string;
+          ano?: string | null;
+          link?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Entram no `sameAs` do schema — é assim que buscadores ligam a pessoa aos perfis dela.
+     */
+    redes?:
+      | {
+          rede: 'instagram' | 'linkedin' | 'youtube' | 'x' | 'tiktok' | 'site' | 'outro';
+          url: string;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Opcional. Aparece na página /sobre se preenchido.
+     */
+    email?: string | null;
+  };
   boletimTitulo?: string | null;
   boletimChamada?: string | null;
   boletimPeriodicidade?: string | null;
@@ -2028,12 +1243,8 @@ export interface Configuracoes {
   homeDestaques?:
     | (
         | {
-            relationTo: 'materias';
-            value: number | Materia;
-          }
-        | {
-            relationTo: 'guias';
-            value: number | Guia;
+            relationTo: 'textos';
+            value: number | Texto;
           }
         | {
             relationTo: 'vinhos';
@@ -2053,7 +1264,31 @@ export interface ConfiguracoesSelect<T extends boolean = true> {
   assinatura?: T;
   descricao?: T;
   imagemPadrao?: T;
-  autoraPrincipal?: T;
+  autora?:
+    | T
+    | {
+        nome?: T;
+        cargo?: T;
+        foto?: T;
+        bioCurta?: T;
+        bioLonga?: T;
+        credenciais?:
+          | T
+          | {
+              texto?: T;
+              ano?: T;
+              link?: T;
+              id?: T;
+            };
+        redes?:
+          | T
+          | {
+              rede?: T;
+              url?: T;
+              id?: T;
+            };
+        email?: T;
+      };
   boletimTitulo?: T;
   boletimChamada?: T;
   boletimPeriodicidade?: T;
@@ -2098,20 +1333,12 @@ export interface TaskSchedulePublish {
     locale?: string | null;
     doc?:
       | ({
-          relationTo: 'materias';
-          value: number | Materia;
-        } | null)
-      | ({
-          relationTo: 'edicoes';
-          value: number | Edicao;
+          relationTo: 'textos';
+          value: number | Texto;
         } | null)
       | ({
           relationTo: 'vinhos';
           value: number | Vinho;
-        } | null)
-      | ({
-          relationTo: 'guias';
-          value: number | Guia;
         } | null);
     global?: string | null;
     user?: (number | null) | Usuario;

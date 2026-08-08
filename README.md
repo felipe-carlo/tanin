@@ -1,7 +1,7 @@
 # Portal Tanin
 
-A casa canônica do conteúdo da **Tanin** — matérias, o arquivo do Boletim, fichas de
-vinho, guias e agenda. Tudo público, tudo indexável, sem paywall e sem login para ler.
+A casa canônica do conteúdo da **Tanin** — textos (matérias, o arquivo do Boletim e
+guias) e fichas de vinho. Tudo público, tudo indexável, sem paywall e sem login para ler.
 
 - **Site:** Next.js 16 (App Router) + TypeScript + Tailwind CSS 4
 - **Painel:** Payload CMS 3, em português, dentro do mesmo aplicativo, em `/admin`
@@ -29,12 +29,12 @@ pnpm dev
 Para ver o portal cheio de conteúdo de exemplo:
 
 ```bash
-pnpm seed
+pnpm semear
 ```
 
 Isso cria o usuário `ana@tanin.com.br` com a senha `tanin2026`, além de matérias,
-22 edições do Boletim, fichas de vinho, guias e eventos fictícios.
-`pnpm seed --limpar` apaga o conteúdo de exemplo antes de recriar.
+22 edições do Boletim, guias e fichas de vinho fictícias.
+`pnpm semear --limpar` apaga o conteúdo de exemplo antes de recriar.
 
 ### Precisa de um Postgres local
 
@@ -45,16 +45,29 @@ Payload cria e atualiza as tabelas sozinho; em produção, só por migração.
 
 ## Publicar sem tocar em código
 
-Entre em `/admin` e escreva. Alguns detalhes que valem saber:
+Entre em `/admin` e escreva. O painel tem duas coleções de conteúdo, só:
+
+- **Textos** — tudo que se escreve. O campo "Seção", na lateral, decide se o texto é
+  uma matéria, uma edição do Boletim ou um guia — e, com isso, onde ele aparece no
+  site. Nada além de título e corpo é obrigatório para publicar.
+- **Vinhos** — as fichas estruturadas, com nota, veredito e filtros. Uva, região e
+  importadora são texto simples: escreva o nome e pronto.
+
+Alguns detalhes que valem saber:
 
 - **Rascunho e agendamento.** Todo conteúdo nasce como rascunho. Publique quando quiser,
   ou marque uma data futura em "Data de publicação" e o site publica sozinho.
 - **Pré-visualização.** O botão de pré-visualizar mostra a página real, com o design do
   site, antes de qualquer coisa ficar pública.
 - **O endereço da página** é preenchido sozinho a partir do título. Só mexa se quiser.
-- **O resumo importa mais do que parece.** É o trecho que o Google e as inteligências
-  artificiais vão citar. Escreva de 40 a 60 palavras que façam sentido sozinhas, fora da
-  página.
+- **O resumo é opcional — mas importa mais do que parece.** É o trecho que o Google e
+  as inteligências artificiais vão citar. Se ficar em branco, o site usa as primeiras
+  linhas do próprio texto; quando quiser caprichar, escreva de 40 a 60 palavras que
+  façam sentido sozinhas, fora da página.
+- **A edição do Boletim se numera sozinha** ao ser publicada, e o índice "Nesta edição"
+  nasce dos títulos de seção (H2) do próprio corpo.
+- **A ficha da autora** (bio, foto, credenciais, redes) mora em Configurações do site,
+  na aba "Autora" — preencha uma vez e ela assina tudo.
 - **O chip de cor** liga o conteúdo à escala cromática do vinho. É o que dá cor ao
   cartão, à fita do arquivo e aos filtros.
 - **SEO em branco não é problema.** Se você não preencher, o site usa o título, o resumo
@@ -101,7 +114,7 @@ Dois arquivos concentram as decisões que mais importam:
 | `pnpm start` | Roda a versão de produção já gerada |
 | `pnpm typecheck` | Confere os tipos sem gerar nada |
 | `pnpm testar:banco` | Diz se um endereço de banco conecta — e, se não, o que fazer |
-| `pnpm seed` | Popula o banco com conteúdo de exemplo |
+| `pnpm semear` | Popula o banco com conteúdo de exemplo |
 | `pnpm importar:beehiiv` | Importa as edições antigas do beehiiv como rascunho |
 | `pnpm generate:types` | Regenera os tipos depois de mexer nas coleções |
 | `pnpm migrate:criar <nome>` | Cria uma migração a partir das mudanças no modelo |

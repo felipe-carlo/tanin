@@ -3,8 +3,8 @@ import type { Metadata } from 'next'
 
 import { CampoDeBusca } from '@/components/CampoDeBusca'
 import { LinhaMateria } from '@/components/CartaoMateria'
-import { listarMaterias } from '@/lib/consultas'
-import type { Materia } from '@/payload-types'
+import { listarTextos } from '@/lib/consultas'
+import type { Texto } from '@/payload-types'
 
 /**
  * Sem este bloco, o 404 herda do layout raiz `canonical: '/'` e `index, follow` — ou
@@ -30,7 +30,7 @@ const CAMINHOS = [
 export default async function NaoEncontrada() {
   // Um 404 não pode depender do banco: se o banco cair, esta é justamente a página
   // que todo mundo vai ver. Sem as matérias recentes ela continua de pé.
-  const recentes: Materia[] = await listarMaterias({ limite: 3 })
+  const recentes: Texto[] = await listarTextos({ secao: 'materia', limite: 3 })
     .then((lista) => lista.docs)
     .catch(() => [])
 
