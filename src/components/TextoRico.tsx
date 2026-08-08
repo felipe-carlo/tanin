@@ -9,6 +9,7 @@ import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical
 import { Figura } from '@/components/Imagem'
 import { CartaoVinhoLinha } from '@/components/CartaoVinho'
 import { paraSlug } from '@/fields/slug'
+import { enderecoDoDoc } from '@/lib/secoes'
 import type { Midia, Vinho } from '@/payload-types'
 
 /**
@@ -19,24 +20,6 @@ import type { Midia, Vinho } from '@/payload-types'
  * a checagem de tipo aos conversores sem espalhar `any` pelo arquivo.
  */
 type NoDeBloco<Campos> = { node: { fields: Campos } }
-
-/** Onde cada coleção mora no site. */
-const BASE_POR_COLECAO: Record<string, string> = {
-  materias: '/materias',
-  edicoes: '/boletim',
-  vinhos: '/vinhos',
-  guias: '/guias',
-}
-
-/** Converte um link interno do editor no endereço público correspondente. */
-const enderecoInterno = (relacao?: string | null, valor?: unknown): string => {
-  const prefixo = BASE_POR_COLECAO[String(relacao)] ?? '/'
-  const slug =
-    valor && typeof valor === 'object' && 'slug' in valor
-      ? String((valor as { slug?: string }).slug ?? '')
-      : ''
-  return slug ? `${prefixo}/${slug}` : prefixo
-}
 
 /** Texto puro de um nó do editor, para derivar a âncora de um título. */
 const textoDoNo = (no: unknown): string => {
@@ -50,8 +33,9 @@ const textoDoNo = (no: unknown): string => {
 const conversores: JSXConvertersFunction = ({ defaultConverters }) => ({
   ...defaultConverters,
   ...LinkJSXConverter({
+    // O endereço de um texto depende da seção dele — `enderecoDoDoc` resolve isso.
     internalDocToHref: ({ linkNode }) =>
-      enderecoInterno(linkNode.fields.doc?.relationTo, linkNode.fields.doc?.value),
+      enderecoDoDoc(linkNode.fields.doc?.relationTo, linkNode.fields.doc?.value),
   }),
 
   /**
@@ -89,10 +73,12 @@ const conversores: JSXConvertersFunction = ({ defaultConverters }) => ({
 
   // Menção a outro conteúdo, renderizada como link em linha.
   relationship: ({ node }) => {
-    const valor = node.value as { slug?: string; titulo?: string; nome?: string } | number
+    const valor = node.value as
+      | { slug?: string; secao?: string; titulo?: string; nome?: string }
+      | number
     if (!valor || typeof valor !== 'object') return null
     return (
-      <Link href={enderecoInterno(node.relationTo, valor)}>
+      <Link href={enderecoDoDoc(node.relationTo, valor)}>
         {valor.titulo ?? valor.nome ?? 'ver conteúdo'}
       </Link>
     )

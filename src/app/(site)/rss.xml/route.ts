@@ -3,9 +3,12 @@ import type { HTMLConvertersFunction } from '@payloadcms/richtext-lexical/html'
 import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
 
 import { comoMidia, urlDaMidia } from '@/components/Imagem'
-import { listarEdicoes, listarMaterias } from '@/lib/consultas'
-import { NOME_SITE, obterConfiguracoes, URL_SITE, urlAbsoluta } from '@/lib/site'
-import type { Autor, Categoria, Midia } from '@/payload-types'
+import { listarTextos } from '@/lib/consultas'
+import { categoriaPorValor } from '@/lib/categorias'
+import { enderecoDoDoc } from '@/lib/secoes'
+import { autoraDe, NOME_SITE, obterConfiguracoes, URL_SITE, urlAbsoluta } from '@/lib/site'
+import { resumoOuTrecho } from '@/lib/texto'
+import type { Midia } from '@/payload-types'
 
 /**
  * O FEED RSS — TEXTO INTEGRAL
@@ -46,22 +49,9 @@ const rfc822 = (valor?: string | null): string => {
 /* Lexical → HTML                                                              */
 /* -------------------------------------------------------------------------- */
 
-const BASE_POR_COLECAO: Record<string, string> = {
-  materias: '/materias',
-  edicoes: '/boletim',
-  vinhos: '/vinhos',
-  guias: '/guias',
-}
-
 /** No feed todo endereço precisa ser absoluto: o HTML será lido fora do domínio. */
-const enderecoDoDocumento = (relacao: string | undefined, valor: unknown): string => {
-  const base = BASE_POR_COLECAO[relacao ?? ''] ?? ''
-  const slug =
-    valor && typeof valor === 'object' && 'slug' in valor
-      ? String((valor as { slug?: string }).slug ?? '')
-      : ''
-  return urlAbsoluta(slug && base ? `${base}/${slug}` : base || '/')
-}
+const enderecoDoDocumento = (relacao: string | undefined, valor: unknown): string =>
+  urlAbsoluta(enderecoDoDoc(relacao, valor))
 
 /** Os campos de um bloco do editor, já tipados — o conversor genérico entrega `any`. */
 type Bloco<Campos> = { node: { fields: Campos } }
@@ -161,42 +151,36 @@ interface ItemDoFeed {
   conteudo: string
 }
 
-const nomeDoAutor = (valor: unknown): string | null =>
-  valor && typeof valor === 'object' ? ((valor as Autor).nome ?? null) : null
-
 const publico = (documento: { seo?: { naoIndexar?: boolean | null } | null }): boolean =>
   !documento.seo?.naoIndexar
 
 async function montarItens(): Promise<ItemDoFeed[]> {
   const [config, materias, edicoes] = await Promise.all([
     obterConfiguracoes(),
-    listarMaterias({ limite: QUANTIDADE }),
-    listarEdicoes({ limite: QUANTIDADE }),
+    listarTextos({ secao: 'materia', limite: QUANTIDADE }),
+    listarTextos({ secao: 'boletim', limite: QUANTIDADE }),
   ])
 
-  const assinaturaDaCasa = nomeDoAutor(config.autoraPrincipal) ?? (config.nomeSite ?? NOME_SITE)
+  const assinaturaDaCasa = autoraDe(config).nome ?? (config.nomeSite ?? NOME_SITE)
 
   const deMaterias: ItemDoFeed[] = materias.docs.filter(publico).map((materia) => ({
     titulo: materia.titulo,
     endereco: urlAbsoluta(`/materias/${materia.slug}`),
     data: materia.dataPublicacao ?? materia.createdAt,
-    resumo: materia.resumo,
-    autoria: nomeDoAutor(materia.autor) ?? assinaturaDaCasa,
-    categoria:
-      (materia.categoria && typeof materia.categoria === 'object'
-        ? (materia.categoria as Categoria).nome
-        : null) ?? 'Matérias',
-    conteudo: corpoEmHtml(materia.corpo, materia.resumo),
+    resumo: resumoOuTrecho(materia),
+    autoria: assinaturaDaCasa,
+    categoria: categoriaPorValor(materia.categoria)?.label ?? 'Matérias',
+    conteudo: corpoEmHtml(materia.corpo, resumoOuTrecho(materia)),
   }))
 
   const deEdicoes: ItemDoFeed[] = edicoes.docs.filter(publico).map((edicao) => ({
     titulo: `Edição ${edicao.numero} · ${edicao.titulo}`,
     endereco: urlAbsoluta(`/boletim/${edicao.slug}`),
-    data: edicao.dataEnvio,
-    resumo: edicao.resumo,
+    data: edicao.dataPublicacao ?? edicao.createdAt,
+    resumo: resumoOuTrecho(edicao),
     autoria: assinaturaDaCasa,
     categoria: config.boletimTitulo ?? 'Boletim Tanin',
-    conteudo: corpoEmHtml(edicao.corpo, edicao.resumo),
+    conteudo: corpoEmHtml(edicao.corpo, resumoOuTrecho(edicao)),
   }))
 
   return [...deMaterias, ...deEdicoes]

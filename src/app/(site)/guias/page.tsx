@@ -4,10 +4,11 @@ import type { Metadata } from 'next'
 import { Chip } from '@/components/Chip'
 import { JsonLd } from '@/components/JsonLd'
 import { Migalhas } from '@/components/Migalhas'
-import { TIPOS_DE_GUIA } from '@/collections/Guias'
+import { TIPOS_DE_GUIA } from '@/collections/Textos'
 import { dataPorExtenso, iso, plural } from '@/lib/formatar'
 import { metadadosDeIndice } from '@/lib/metadados'
-import { listarGuias } from '@/lib/consultas'
+import { listarTextos } from '@/lib/consultas'
+import { resumoOuTrecho } from '@/lib/texto'
 import { umParametro, type ParametrosDeBusca } from '@/lib/payload'
 import { schemaDeLista, schemaDeMigalhas } from '@/lib/schema'
 
@@ -35,7 +36,12 @@ export default async function IndiceDeGuias({ searchParams }: Props) {
   const tipoAtivo = umParametro(parametros.tipo)
   const nivelAtivo = umParametro(parametros.nivel)
 
-  const resultado = await listarGuias({ limite: 100, tipo: tipoAtivo, nivel: nivelAtivo })
+  const resultado = await listarTextos({
+    secao: 'guia',
+    limite: 100,
+    tipoGuia: tipoAtivo,
+    nivel: nivelAtivo,
+  })
   const guias = resultado.docs
 
   const trilha = [
@@ -193,9 +199,9 @@ export default async function IndiceDeGuias({ searchParams }: Props) {
                               {guia.titulo}
                             </Link>
                           </h3>
-                          {guia.resumo && (
+                          {resumoOuTrecho(guia) && (
                             <p className="mt-2 max-w-prose text-apoio leading-relaxed text-grafite linhas-2 bonito">
-                              {guia.resumo}
+                              {resumoOuTrecho(guia)}
                             </p>
                           )}
                         </div>

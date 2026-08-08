@@ -19,6 +19,8 @@ import { montarMetadados } from '@/lib/metadados'
 import { obterPayload } from '@/lib/payload'
 import { obterVinho } from '@/lib/consultas'
 import { schemaDeFaq, schemaDeMigalhas, schemaDoVinho } from '@/lib/schema'
+import { enderecoDoTexto } from '@/lib/secoes'
+import { autoraDe, obterConfiguracoes } from '@/lib/site'
 import {
   descreverProcedencia,
   descreverUvas,
@@ -27,7 +29,7 @@ import {
   rotuloPreco,
   rotuloTipo,
 } from '@/lib/vinho'
-import type { Autor, Guia, Importadora, Materia, Regiao, Uva, Vinho } from '@/payload-types'
+import type { Texto, Vinho } from '@/payload-types'
 
 export const revalidate = 3600
 
@@ -52,10 +54,10 @@ type Props = { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const vinho = await obterVinho(slug)
+  const [vinho, config] = await Promise.all([obterVinho(slug), obterConfiguracoes()])
   if (!vinho) return { title: 'Ficha não encontrada' }
 
-  const autor = vinho.autor && typeof vinho.autor === 'object' ? (vinho.autor as Autor) : null
+  const autora = autoraDe(config)
 
   return montarMetadados({
     seo: vinho.seo,
@@ -65,36 +67,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     caminho: `/vinhos/${vinho.slug}`,
     publicadoEm: vinho.dataPublicacao,
     atualizadoEm: vinho.dataAtualizacao ?? vinho.updatedAt,
-    autores: autor ? [autor.nome] : undefined,
+    autores: autora.nome ? [autora.nome] : undefined,
     secao: 'Fichas de vinho',
   })
 }
 
 export default async function PaginaDoVinho({ params }: Props) {
   const { slug } = await params
-  const vinho = await obterVinho(slug)
+  const [vinho, config] = await Promise.all([obterVinho(slug), obterConfiguracoes()])
   if (!vinho) notFound()
 
-  const autor = vinho.autor && typeof vinho.autor === 'object' ? (vinho.autor as Autor) : null
-  const regiao = vinho.regiao && typeof vinho.regiao === 'object' ? (vinho.regiao as Regiao) : null
-  const importadora =
-    vinho.importadora && typeof vinho.importadora === 'object'
-      ? (vinho.importadora as Importadora)
-      : null
+  const autora = autoraDe(config)
+  const importadora = vinho.importadora?.nome ? vinho.importadora : null
+  const uvas = (vinho.uvas ?? []).filter((item) => Boolean(item.uva))
 
-  const uvas = (vinho.uvas ?? [])
-    .map((item) => (item.uva && typeof item.uva === 'object' ? (item.uva as Uva) : null))
-    .filter((uva): uva is Uva => Boolean(uva))
-
-  const similares = (vinho.vinhosSimilares ?? []).filter(
-    (item): item is Vinho => typeof item === 'object',
+  // O campo único de relacionados se divide: vinhos viram "se gostou deste, prove";
+  // textos com seção de guia vão para o trilho; os demais viram "leia também".
+  const relacionados = (vinho.relacionados ?? []).filter(
+    (item) => typeof item.value === 'object',
   )
-  const materias = (vinho.materiasRelacionadas ?? []).filter(
-    (item): item is Materia => typeof item === 'object',
-  )
-  const guias = (vinho.guiasRelacionados ?? []).filter(
-    (item): item is Guia => typeof item === 'object',
-  )
+  const similares = relacionados
+    .filter((item) => item.relationTo === 'vinhos')
+    .map((item) => item.value as Vinho)
+  const textosRelacionados = relacionados
+    .filter((item) => item.relationTo === 'textos')
+    .map((item) => item.value as Texto)
+  const guias = textosRelacionados.filter((texto) => texto.secao === 'guia')
+  const materias = textosRelacionados.filter((texto) => texto.secao !== 'guia')
 
   const dataDeEstreia = vinho.dataPublicacao ?? vinho.createdAt
   const trilha = [
@@ -121,7 +120,7 @@ export default async function PaginaDoVinho({ params }: Props) {
                 ·
               </span>
               <Link
-                href={`/vinhos?pais=${encodeURIComponent(vinho.pais)}`}
+                href={`/vinhos?pais=${encodeURIComponent(vinho.pais ?? '')}`}
                 className="text-grafite hover:underline"
               >
                 {descreverProcedencia(vinho)}
@@ -138,16 +137,18 @@ export default async function PaginaDoVinho({ params }: Props) {
             </h1>
 
             {/* O VEREDITO — o trecho que a IA vai citar. Vem antes de tudo. */}
-            <p className="mt-7 max-w-2xl border-l-2 border-borra pl-5 text-corpo-grande leading-relaxed bonito">
-              {vinho.veredito}
-            </p>
+            {vinho.veredito && (
+              <p className="mt-7 max-w-2xl border-l-2 border-borra pl-5 text-corpo-grande leading-relaxed bonito">
+                {vinho.veredito}
+              </p>
+            )}
 
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
               <Tacas nota={vinho.nota} tamanho={18} />
               <p className="rotulo text-grafite">
                 Provado por{' '}
                 <Link href="/sobre" className="text-borra hover:underline">
-                  {autor?.nome ?? 'Tanin'}
+                  {autora.nome ?? 'Tanin'}
                 </Link>{' '}
                 em <time dateTime={iso(dataDeEstreia)}>{dataCurta(dataDeEstreia)}</time>
               </p>
@@ -216,7 +217,7 @@ export default async function PaginaDoVinho({ params }: Props) {
                 <ul className="mt-4 space-y-3">
                   {materias.map((materia) => (
                     <li key={materia.id}>
-                      <Link href={`/materias/${materia.slug}`} className="link-titulo text-apoio">
+                      <Link href={enderecoDoTexto(materia)} className="link-titulo text-apoio">
                         {materia.titulo}
                       </Link>
                     </li>
@@ -225,7 +226,7 @@ export default async function PaginaDoVinho({ params }: Props) {
               </section>
             )}
 
-            {autor && <BlocoAutor autor={autor} />}
+            <BlocoAutor autor={autora} />
           </div>
 
           {/* Trilho de dados — a parte "Wine Folly" da página. */}
@@ -241,13 +242,7 @@ export default async function PaginaDoVinho({ params }: Props) {
                   { rotulo: 'Produtor', valor: vinho.produtor },
                   {
                     rotulo: 'Região',
-                    valor: regiao ? (
-                      <Link href={`/vinhos?pais=${encodeURIComponent(vinho.pais)}`} className="hover:underline">
-                        {regiao.nome}
-                      </Link>
-                    ) : (
-                      vinho.subRegiao
-                    ),
+                    valor: vinho.regiao ?? vinho.subRegiao,
                   },
                   { rotulo: 'País', valor: vinho.pais },
                   { rotulo: 'Safra', valor: vinho.safra ?? 'Sem safra' },
@@ -264,18 +259,17 @@ export default async function PaginaDoVinho({ params }: Props) {
                     valor:
                       uvas.length > 0 ? (
                         <span className="inline-flex flex-wrap justify-end gap-x-2">
-                          {vinho.uvas?.map((item, indice) => {
-                            const uva = item.uva && typeof item.uva === 'object' ? (item.uva as Uva) : null
-                            if (!uva) return null
-                            return (
-                              <span key={item.id ?? indice}>
-                                <Link href={`/vinhos?uva=${uva.slug}`} className="hover:underline">
-                                  {uva.nome}
-                                </Link>
-                                {item.percentual ? ` ${item.percentual}%` : ''}
-                              </span>
-                            )
-                          })}
+                          {uvas.map((item, indice) => (
+                            <span key={item.id ?? indice}>
+                              <Link
+                                href={`/vinhos?uva=${encodeURIComponent(item.uva ?? '')}`}
+                                className="hover:underline"
+                              >
+                                {item.uva}
+                              </Link>
+                              {item.percentual ? ` ${item.percentual}%` : ''}
+                            </span>
+                          ))}
                         </span>
                       ) : (
                         descreverUvas(vinho) || null
@@ -323,9 +317,9 @@ export default async function PaginaDoVinho({ params }: Props) {
                     <div className="flex items-baseline justify-between gap-4 border-b border-fio py-3">
                       <dt className="rotulo text-grafite">Importadora</dt>
                       <dd className="text-right text-apoio">
-                        {importadora.site ? (
+                        {importadora.url ? (
                           <a
-                            href={importadora.site}
+                            href={importadora.url}
                             target="_blank"
                             rel="noopener"
                             className="hover:underline"
@@ -373,7 +367,7 @@ export default async function PaginaDoVinho({ params }: Props) {
                   <ul className="mt-4 space-y-3">
                     {guias.map((guia) => (
                       <li key={guia.id}>
-                        <Link href={`/guias/${guia.slug}`} className="link-titulo text-apoio">
+                        <Link href={enderecoDoTexto(guia)} className="link-titulo text-apoio">
                           {guia.titulo}
                         </Link>
                       </li>
@@ -420,7 +414,7 @@ export default async function PaginaDoVinho({ params }: Props) {
       )}
 
       <JsonLd
-        dados={[schemaDoVinho(vinho), schemaDeFaq(vinho.faq), schemaDeMigalhas(trilha)]}
+        dados={[schemaDoVinho(vinho, autora), schemaDeFaq(vinho.faq), schemaDeMigalhas(trilha)]}
       />
     </>
   )

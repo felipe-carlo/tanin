@@ -9,10 +9,8 @@ import { TextoRico } from '@/components/TextoRico'
 import { ESCALA_CROMATICA } from '@/lib/escala-cores'
 import { FAIXAS_DE_NOTA, NOTA_MAXIMA, formatarNota } from '@/lib/nota'
 import { metadadosDeIndice } from '@/lib/metadados'
-import { obterAutoraPrincipal } from '@/lib/consultas'
 import { schemaDaPessoa, schemaDeMigalhas } from '@/lib/schema'
-import { NOMES_DE_REDE, URL_SITE, obterConfiguracoes } from '@/lib/site'
-import type { Autor } from '@/payload-types'
+import { NOMES_DE_REDE, URL_SITE, autoraDe, obterConfiguracoes } from '@/lib/site'
 
 export const revalidate = 3600
 
@@ -21,21 +19,18 @@ const DESCRICAO =
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await obterConfiguracoes()
-  const autora =
-    config.autoraPrincipal && typeof config.autoraPrincipal === 'object'
-      ? (config.autoraPrincipal as Autor)
-      : await obterAutoraPrincipal()
+  const autora = autoraDe(config)
 
   return {
     ...metadadosDeIndice({
-      titulo: autora ? `Sobre ${autora.nome} e a Tanin` : 'Sobre a Tanin',
+      titulo: autora.nome ? `Sobre ${autora.nome} e a Tanin` : 'Sobre a Tanin',
       descricao: autora?.bioCurta ?? DESCRICAO,
       caminho: '/sobre',
     }),
     openGraph: {
       type: 'profile',
       url: `${URL_SITE}/sobre`,
-      title: autora ? `Sobre ${autora.nome} e a Tanin` : 'Sobre a Tanin',
+      title: autora.nome ? `Sobre ${autora.nome} e a Tanin` : 'Sobre a Tanin',
       description: autora?.bioCurta ?? DESCRICAO,
       locale: 'pt_BR',
       siteName: 'Tanin',
@@ -45,10 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function PaginaSobre() {
   const config = await obterConfiguracoes()
-  const autora =
-    config.autoraPrincipal && typeof config.autoraPrincipal === 'object'
-      ? (config.autoraPrincipal as Autor)
-      : await obterAutoraPrincipal()
+  const autora = autoraDe(config)
 
   const trilha = [
     { nome: 'Início', endereco: '/' },
@@ -317,7 +309,7 @@ export default async function PaginaSobre() {
 
       <JsonLd
         dados={[
-          autora ? schemaDaPessoa(autora, true) : null,
+          schemaDaPessoa(autora, true),
           schemaDeMigalhas(trilha),
         ]}
       />

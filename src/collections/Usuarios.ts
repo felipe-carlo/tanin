@@ -11,7 +11,8 @@ export const Usuarios: CollectionConfig = {
   admin: {
     useAsTitle: 'nome',
     defaultColumns: ['nome', 'email', 'papel'],
-    group: 'Configuração',
+    group: 'Bastidores',
+    description: 'Quem pode entrar no painel. Não confunda com a ficha pública da autora, que mora em Configurações.',
   },
   access: {
     read: ({ req }) => Boolean(req.user),
@@ -47,15 +48,6 @@ export const Usuarios: CollectionConfig = {
       admin: {
         description:
           'Administrador mexe em tudo, inclusive em usuários. Editor escreve e publica conteúdo.',
-      },
-    },
-    {
-      name: 'autor',
-      type: 'relationship',
-      relationTo: 'autores',
-      label: 'Ficha de autor',
-      admin: {
-        description: 'Liga este login à ficha pública de autoria, que aparece nas matérias.',
       },
     },
   ],

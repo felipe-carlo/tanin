@@ -18,8 +18,14 @@ export const MENU_PADRAO = [
   { rotulo: 'Boletim', endereco: '/boletim' },
   { rotulo: 'Vinhos', endereco: '/vinhos' },
   { rotulo: 'Guias', endereco: '/guias' },
-  { rotulo: 'Agenda', endereco: '/agenda' },
 ]
+
+/** A ficha pública da autora, como guardada no global de configurações. */
+export type Autora = NonNullable<Configuracoes['autora']>
+
+/** A autora configurada, ou um esqueleto com o nome padrão para o site não quebrar. */
+export const autoraDe = (config: Partial<Configuracoes>): Autora =>
+  config.autora ?? { nome: 'Ana Luiza Leal' }
 
 /**
  * Lê as configurações do site.

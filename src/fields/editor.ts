@@ -96,7 +96,7 @@ export const editorTanin = lexicalEditor({
     OrderedListFeature(),
     HorizontalRuleFeature(),
     LinkFeature({
-      enabledCollections: ['materias', 'edicoes', 'vinhos', 'guias'],
+      enabledCollections: ['textos', 'vinhos'],
       fields: ({ defaultFields }) => [
         ...defaultFields,
         {
@@ -107,7 +107,7 @@ export const editorTanin = lexicalEditor({
         },
       ],
     }),
-    RelationshipFeature({ enabledCollections: ['materias', 'edicoes', 'vinhos', 'guias'] }),
+    RelationshipFeature({ enabledCollections: ['textos', 'vinhos'] }),
     UploadFeature({
       collections: {
         midia: {

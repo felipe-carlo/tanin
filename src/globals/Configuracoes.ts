@@ -2,6 +2,7 @@ import type { GlobalConfig } from 'payload'
 
 import { autenticado } from '@/lib/acesso'
 import { revalidarSiteInteiro } from '@/hooks/revalidar'
+import { editorTanin } from '@/fields/editor'
 
 export const Configuracoes: GlobalConfig = {
   slug: 'configuracoes',
@@ -44,12 +45,92 @@ export const Configuracoes: GlobalConfig = {
               relationTo: 'midia',
               label: 'Imagem padrão de compartilhamento',
             },
+          ],
+        },
+        {
+          label: 'Autora',
+          fields: [
             {
-              name: 'autoraPrincipal',
-              type: 'relationship',
-              relationTo: 'autores',
-              label: 'Autora principal',
-              admin: { description: 'Quem assina a publicação. Alimenta a página /sobre e o schema.' },
+              name: 'autora',
+              type: 'group',
+              label: 'Quem assina a publicação',
+              admin: {
+                description:
+                  'A ficha pública da autora. Alimenta a página /sobre, o pé das matérias e o schema Person que buscadores e IAs leem.',
+              },
+              fields: [
+                { name: 'nome', type: 'text', label: 'Nome', defaultValue: 'Ana Luiza Leal' },
+                {
+                  name: 'cargo',
+                  type: 'text',
+                  label: 'Como se apresenta',
+                  admin: { description: 'Ex.: "Jornalista de vinho e criadora da Tanin".' },
+                },
+                { name: 'foto', type: 'upload', relationTo: 'midia', label: 'Foto' },
+                {
+                  name: 'bioCurta',
+                  type: 'textarea',
+                  label: 'Biografia curta',
+                  maxLength: 280,
+                  admin: { description: 'Uma ou duas frases. Aparece no pé das matérias.' },
+                },
+                {
+                  name: 'bioLonga',
+                  type: 'richText',
+                  label: 'Biografia completa',
+                  editor: editorTanin,
+                  admin: { description: 'Texto completo da página /sobre.' },
+                },
+                {
+                  name: 'credenciais',
+                  type: 'array',
+                  label: 'Credenciais',
+                  labels: { singular: 'Credencial', plural: 'Credenciais' },
+                  admin: {
+                    description:
+                      'Formação, certificações, prêmios e veículos onde publicou. É o que sustenta a autoridade do portal aos olhos do Google e das IAs.',
+                  },
+                  fields: [
+                    { name: 'texto', type: 'text', label: 'Credencial', required: true },
+                    { name: 'ano', type: 'text', label: 'Ano' },
+                    { name: 'link', type: 'text', label: 'Endereço (opcional)' },
+                  ],
+                },
+                {
+                  name: 'redes',
+                  type: 'array',
+                  label: 'Redes e perfis',
+                  labels: { singular: 'Perfil', plural: 'Perfis' },
+                  admin: {
+                    description:
+                      'Entram no `sameAs` do schema — é assim que buscadores ligam a pessoa aos perfis dela.',
+                  },
+                  fields: [
+                    {
+                      name: 'rede',
+                      type: 'select',
+                      label: 'Rede',
+                      required: true,
+                      options: [
+                        { label: 'Instagram', value: 'instagram' },
+                        { label: 'LinkedIn', value: 'linkedin' },
+                        { label: 'YouTube', value: 'youtube' },
+                        { label: 'X (Twitter)', value: 'x' },
+                        { label: 'TikTok', value: 'tiktok' },
+                        { label: 'Site pessoal', value: 'site' },
+                        { label: 'Outro', value: 'outro' },
+                      ],
+                    },
+                    { name: 'url', type: 'text', label: 'Endereço', required: true },
+                  ],
+                },
+                {
+                  name: 'email',
+                  type: 'text',
+                  label: 'E-mail de contato público',
+                  admin: { description: 'Opcional. Aparece na página /sobre se preenchido.' },
+                },
+              ],
             },
           ],
         },
@@ -138,7 +219,7 @@ export const Configuracoes: GlobalConfig = {
             {
               name: 'homeDestaques',
               type: 'relationship',
-              relationTo: ['materias', 'guias', 'vinhos'],
+              relationTo: ['textos', 'vinhos'],
               hasMany: true,
               maxRows: 4,
               label: 'Destaques fixos',

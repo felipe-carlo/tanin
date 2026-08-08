@@ -15,10 +15,13 @@ import { TituloDeSecao } from '@/components/Secao'
 import { TextoRico } from '@/components/TextoRico'
 import { dataPorExtenso, iso } from '@/lib/formatar'
 import { montarMetadados } from '@/lib/metadados'
+import { categoriaPorValor } from '@/lib/categorias'
 import { obterPayload } from '@/lib/payload'
-import { listarMaterias, obterMateria } from '@/lib/consultas'
+import { listarTextos, obterTexto } from '@/lib/consultas'
 import { schemaDaMateria, schemaDeFaq, schemaDeMigalhas } from '@/lib/schema'
-import type { Autor, Categoria, Guia, Materia, Tag, Vinho } from '@/payload-types'
+import { autoraDe, obterConfiguracoes } from '@/lib/site'
+import { resumoOuTrecho } from '@/lib/texto'
+import type { Texto, Vinho } from '@/payload-types'
 
 export const revalidate = 3600
 export const dynamicParams = true
@@ -28,8 +31,10 @@ export async function generateStaticParams() {
   try {
     const payload = await obterPayload()
     const materias = await payload.find({
-      collection: 'materias',
-      where: { _status: { equals: 'published' } },
+      collection: 'textos',
+      where: {
+        and: [{ _status: { equals: 'published' } }, { secao: { equals: 'materia' } }],
+      },
       limit: 500,
       depth: 0,
       select: { slug: true },
@@ -47,58 +52,51 @@ type Props = { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const materia = await obterMateria(slug)
+  const [materia, config] = await Promise.all([obterTexto('materia', slug), obterConfiguracoes()])
   if (!materia) return { title: 'Matéria não encontrada' }
 
-  const autor = materia.autor && typeof materia.autor === 'object' ? (materia.autor as Autor) : null
-  const categoria =
-    materia.categoria && typeof materia.categoria === 'object'
-      ? (materia.categoria as Categoria)
-      : null
+  const autora = autoraDe(config)
+  const categoria = categoriaPorValor(materia.categoria)
 
   return montarMetadados({
     seo: materia.seo,
     titulo: materia.titulo,
-    descricao: materia.resumo,
+    descricao: resumoOuTrecho(materia),
     imagem: materia.destaque?.imagem,
     caminho: `/materias/${materia.slug}`,
     publicadoEm: materia.dataPublicacao,
     atualizadoEm: materia.dataAtualizacao ?? materia.updatedAt,
-    autores: autor ? [autor.nome] : undefined,
-    secao: categoria?.nome,
-    tags: materia.tags
-      ?.map((tag) => (typeof tag === 'object' ? (tag as Tag).nome : null))
-      .filter((nome): nome is string => Boolean(nome)),
+    autores: autora.nome ? [autora.nome] : undefined,
+    secao: categoria?.label,
   })
 }
 
 export default async function PaginaDaMateria({ params }: Props) {
   const { slug } = await params
-  const materia = await obterMateria(slug)
+  const [materia, config] = await Promise.all([obterTexto('materia', slug), obterConfiguracoes()])
   if (!materia) notFound()
 
-  const autor = materia.autor && typeof materia.autor === 'object' ? (materia.autor as Autor) : null
-  const categoria =
-    materia.categoria && typeof materia.categoria === 'object'
-      ? (materia.categoria as Categoria)
-      : null
+  const autora = autoraDe(config)
+  const categoria = categoriaPorValor(materia.categoria)
 
-  const vinhos = (materia.vinhosRelacionados ?? []).filter(
-    (item): item is Vinho => typeof item === 'object',
-  )
-  const guias = (materia.guiasRelacionados ?? []).filter(
-    (item): item is Guia => typeof item === 'object',
-  )
-  const tags = (materia.tags ?? []).filter((item): item is Tag => typeof item === 'object')
+  // O campo único de relacionados se divide pela natureza de cada item:
+  // vinhos viram cartões no trilho, guias viram "para entender melhor" e
+  // os demais textos viram o "leia também".
+  const relacionados = materia.relacionados ?? []
+  const vinhos = relacionados
+    .filter((item) => item.relationTo === 'vinhos' && typeof item.value === 'object')
+    .map((item) => item.value as Vinho)
+  const textosRelacionados = relacionados
+    .filter((item) => item.relationTo === 'textos' && typeof item.value === 'object')
+    .map((item) => item.value as Texto)
+  const guias = textosRelacionados.filter((texto) => texto.secao === 'guia')
 
   // "Leia também" escolhido à mão vence; sem escolha, cai nas mais recentes.
-  const escolhidas = (materia.materiasRelacionadas ?? []).filter(
-    (item): item is Materia => typeof item === 'object',
-  )
+  const escolhidas = textosRelacionados.filter((texto) => texto.secao !== 'guia')
   const relacionadas =
     escolhidas.length > 0
       ? escolhidas.slice(0, 3)
-      : (await listarMaterias({ limite: 3, excluirIds: [materia.id] })).docs
+      : (await listarTextos({ secao: 'materia', limite: 3, excluirIds: [materia.id] })).docs
 
   const dataDeEstreia = materia.dataPublicacao ?? materia.createdAt
   const foiAtualizada =
@@ -126,9 +124,9 @@ export default async function PaginaDaMateria({ params }: Props) {
           <div className="col-span-6 lg:col-span-8">
             <p className="rotulo flex flex-wrap items-center gap-x-3 gap-y-1 text-borra">
               <Chip cor={materia.chipCor} tamanho="pequeno" />
-              {categoria?.nome && (
-                <Link href={`/materias?categoria=${categoria.slug}`} className="hover:underline">
-                  {categoria.nome}
+              {categoria && (
+                <Link href={`/materias?categoria=${categoria.value}`} className="hover:underline">
+                  {categoria.label}
                 </Link>
               )}
             </p>
@@ -147,11 +145,11 @@ export default async function PaginaDaMateria({ params }: Props) {
             )}
 
             <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2">
-              {autor && (
+              {autora.nome && (
                 <p className="rotulo">
                   Por{' '}
                   <Link href="/sobre" className="text-borra hover:underline">
-                    {autor.nome}
+                    {autora.nome}
                   </Link>
                 </p>
               )}
@@ -183,7 +181,7 @@ export default async function PaginaDaMateria({ params }: Props) {
 
           {/* O resumo como olho de revista — e como o trecho que a IA vai citar. */}
           <p className="col-span-6 self-end border-l border-borra pl-5 text-apoio leading-relaxed text-grafite lg:col-span-3 lg:col-start-10 bonito">
-            {materia.resumo}
+            {resumoOuTrecho(materia)}
           </p>
         </header>
 
@@ -207,25 +205,7 @@ export default async function PaginaDaMateria({ params }: Props) {
 
             <Faq perguntas={materia.faq} />
 
-            {tags.length > 0 && (
-              <div className="mt-14 border-t border-fio pt-5">
-                <h2 className="rotulo text-grafite">Assuntos</h2>
-                <ul className="mt-3 flex flex-wrap gap-x-2 gap-y-2">
-                  {tags.map((tag) => (
-                    <li key={tag.id}>
-                      <Link
-                        href={`/materias?tag=${tag.slug}`}
-                        className="rotulo inline-block border border-fio px-3 py-2 text-grafite transition-colors hover:border-tinta hover:text-tinta"
-                      >
-                        {tag.nome}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {autor && <BlocoAutor autor={autor} />}
+            <BlocoAutor autor={autora} />
           </div>
 
           {/* Um `div`, e não um `aside`: cada bloco aqui dentro já é uma `section` com
@@ -299,7 +279,7 @@ export default async function PaginaDaMateria({ params }: Props) {
 
       <JsonLd
         dados={[
-          schemaDaMateria(materia),
+          schemaDaMateria(materia, autora),
           schemaDeFaq(materia.faq),
           schemaDeMigalhas(trilha),
         ]}

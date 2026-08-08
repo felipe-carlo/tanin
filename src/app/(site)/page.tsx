@@ -8,17 +8,11 @@ import { FitaCromatica } from '@/components/FitaCromatica'
 import { FormularioBoletim } from '@/components/FormularioBoletim'
 import { Imagem } from '@/components/Imagem'
 import { Secao, TituloDeSecao } from '@/components/Secao'
-import { dataPorExtenso, dataDiaEMes, doisDigitos, iso } from '@/lib/formatar'
-import {
-  listarEdicoes,
-  listarEventos,
-  listarGuias,
-  listarMaterias,
-  listarVinhos,
-  obterManchete,
-} from '@/lib/consultas'
-import { obterConfiguracoes } from '@/lib/site'
-import type { Autor, Categoria } from '@/payload-types'
+import { dataPorExtenso, doisDigitos, iso } from '@/lib/formatar'
+import { listarTextos, listarVinhos, obterManchete } from '@/lib/consultas'
+import { categoriaPorValor } from '@/lib/categorias'
+import { resumoOuTrecho } from '@/lib/texto'
+import { autoraDe, obterConfiguracoes } from '@/lib/site'
 
 // A home é montada a cada hora, ou quando o conteúdo muda. Ninguém espera pelo banco.
 export const revalidate = 3600
@@ -28,25 +22,20 @@ export const metadata: Metadata = {
 }
 
 export default async function Home() {
-  const [config, manchete, edicoes, guias, eventos] = await Promise.all([
+  const [config, manchete, edicoes, guias] = await Promise.all([
     obterConfiguracoes(),
     obterManchete(),
-    listarEdicoes({ limite: 60, ordem: 'asc' }),
-    listarGuias({ limite: 5 }),
-    listarEventos({ futuros: true, limite: 3 }),
+    listarTextos({ secao: 'boletim', limite: 60, ordem: 'numero' }),
+    listarTextos({ secao: 'guia', limite: 5 }),
   ])
 
   const [materias, vinhos] = await Promise.all([
-    listarMaterias({ limite: 7, excluirIds: manchete ? [manchete.id] : [] }),
+    listarTextos({ secao: 'materia', limite: 7, excluirIds: manchete ? [manchete.id] : [] }),
     listarVinhos({ limite: 4 }),
   ])
 
-  const autorManchete =
-    manchete?.autor && typeof manchete.autor === 'object' ? (manchete.autor as Autor) : null
-  const categoriaManchete =
-    manchete?.categoria && typeof manchete.categoria === 'object'
-      ? (manchete.categoria as Categoria)
-      : null
+  const autora = autoraDe(config)
+  const categoriaManchete = categoriaPorValor(manchete?.categoria)
 
   const [destaqueA, destaqueB, destaqueC, ...demais] = materias.docs
   const ultimaEdicao = edicoes.docs[edicoes.docs.length - 1]
@@ -63,7 +52,7 @@ export default async function Home() {
             <div className="revelar col-span-6 lg:col-span-7">
               <p className="rotulo flex flex-wrap items-center gap-x-3 gap-y-1 text-borra">
                 <Chip cor={manchete.chipCor} tamanho="pequeno" />
-                {categoriaManchete?.nome && <span>{categoriaManchete.nome}</span>}
+                {categoriaManchete && <span>{categoriaManchete.label}</span>}
                 <span aria-hidden="true" className="text-tenue">
                   ·
                 </span>
@@ -88,7 +77,7 @@ export default async function Home() {
               )}
 
               <p className="rotulo mt-8 flex flex-wrap items-center gap-x-3 gap-y-1 text-grafite">
-                {autorManchete && <span>Por {autorManchete.nome}</span>}
+                {autora.nome && <span>Por {autora.nome}</span>}
                 {manchete.tempoLeitura ? (
                   <>
                     <span aria-hidden="true" className="text-tenue">
@@ -128,7 +117,7 @@ export default async function Home() {
                 </figure>
               ) : (
                 <p className="border-l border-borra pl-6 text-corpo-grande leading-relaxed bonito">
-                  {manchete.resumo}
+                  {resumoOuTrecho(manchete)}
                 </p>
               )}
             </div>
@@ -241,12 +230,12 @@ export default async function Home() {
                 {ultimaEdicao && (
                   <div className="col-span-6 lg:col-span-5 lg:col-start-8">
                     <p className="rotulo text-grafite">
-                      Última edição · {dataPorExtenso(ultimaEdicao.dataEnvio)}
+                      Última edição · {dataPorExtenso(ultimaEdicao.dataPublicacao)}
                     </p>
                     <h3 className="mt-2 text-t3 leading-tight">
                       <Link href={`/boletim/${ultimaEdicao.slug}`} className="link-titulo">
                         <span className="cartaz !text-t3 mr-2 text-borra">
-                          {doisDigitos(ultimaEdicao.numero)}
+                          {doisDigitos(ultimaEdicao.numero ?? 0)}
                         </span>
                         {ultimaEdicao.titulo}
                       </Link>
@@ -280,44 +269,6 @@ export default async function Home() {
               </div>
             ))}
           </div>
-        </Secao>
-      )}
-
-      {/* ------------------------------------------------------------------ */}
-      {/* AGENDA                                                              */}
-      {/* ------------------------------------------------------------------ */}
-      {eventos.length > 0 && (
-        <Secao rotulo="Agenda" className="caixa !pt-0">
-          <TituloDeSecao acao="Agenda completa" enderecoAcao="/agenda">
-            Vale sair de casa
-          </TituloDeSecao>
-          <ul className="grade">
-            {eventos.map((evento) => (
-              <li key={evento.id} className="col-span-6 lg:col-span-4">
-                <article className="group relative h-full border-t border-tinta pt-4">
-                  <p className="rotulo text-borra">{dataDiaEMes(evento.data)}</p>
-                  <h3 className="mt-2 text-t4 leading-tight">
-                    {evento.linkInscricao ? (
-                      <a
-                        href={evento.linkInscricao}
-                        className="link-titulo"
-                        target="_blank"
-                        rel="noopener"
-                      >
-                        <span className="absolute inset-0" aria-hidden="true" />
-                        {evento.nome}
-                      </a>
-                    ) : (
-                      evento.nome
-                    )}
-                  </h3>
-                  <p className="rotulo mt-2 text-grafite">
-                    {[evento.local, evento.cidade].filter(Boolean).join(' · ')}
-                  </p>
-                </article>
-              </li>
-            ))}
-          </ul>
         </Secao>
       )}
 

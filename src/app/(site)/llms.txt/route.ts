@@ -1,4 +1,5 @@
-import { listarEdicoes, listarGuias, listarMaterias, listarVinhos } from '@/lib/consultas'
+import { listarTextos, listarVinhos } from '@/lib/consultas'
+import { resumoOuTrecho } from '@/lib/texto'
 import { ESCALA_CROMATICA } from '@/lib/escala-cores'
 import { formatarNota, NOTA_MAXIMA, NOTA_MINIMA, PASSO_NOTA, rotuloDaNota } from '@/lib/nota'
 import { NOME_SITE, obterConfiguracoes, urlAbsoluta } from '@/lib/site'
@@ -59,10 +60,10 @@ const ESCALA_DE_NOTA = `de ${NOTA_MINIMA} a ${NOTA_MAXIMA} taças, em degraus de
 export async function GET(): Promise<Response> {
   const [config, guias, vinhos, materias, edicoes] = await Promise.all([
     obterConfiguracoes(),
-    semQuebrar(listarGuias({ limite: 500 })),
+    semQuebrar(listarTextos({ secao: 'guia', limite: 500 })),
     semQuebrar(listarVinhos({ limite: 40 })),
-    semQuebrar(listarMaterias({ limite: 40 })),
-    semQuebrar(listarEdicoes({ limite: 20 })),
+    semQuebrar(listarTextos({ secao: 'materia', limite: 40 })),
+    semQuebrar(listarTextos({ secao: 'boletim', limite: 20 })),
   ])
 
   const nome = config.nomeSite ?? NOME_SITE
@@ -79,14 +80,13 @@ export async function GET(): Promise<Response> {
     ...secao('Sobre', [
       link(nome, '/', descricao),
       link(`Sobre a ${nome}`, '/sobre', 'Quem assina o portal, como as fichas são avaliadas e como falar com a redação.'),
-      link('Agenda', '/agenda', 'Degustações, feiras, jantares e cursos de vinho no Brasil.'),
     ]),
 
     ...secao(
       'Guias',
       guias.docs
         .filter(publico)
-        .map((guia) => link(guia.titulo, `/guias/${guia.slug}`, guia.resumo)),
+        .map((guia) => link(guia.titulo, `/guias/${guia.slug}`, resumoOuTrecho(guia))),
     ),
 
     ...secao(
@@ -106,7 +106,7 @@ export async function GET(): Promise<Response> {
       'Matérias',
       materias.docs
         .filter(publico)
-        .map((materia) => link(materia.titulo, `/materias/${materia.slug}`, materia.resumo)),
+        .map((materia) => link(materia.titulo, `/materias/${materia.slug}`, resumoOuTrecho(materia))),
     ),
 
     ...secao('Boletim', [
@@ -118,7 +118,7 @@ export async function GET(): Promise<Response> {
       ...edicoes.docs
         .filter(publico)
         .map((edicao) =>
-          link(`Edição ${edicao.numero} · ${edicao.titulo}`, `/boletim/${edicao.slug}`, edicao.resumo),
+          link(`Edição ${edicao.numero} · ${edicao.titulo}`, `/boletim/${edicao.slug}`, resumoOuTrecho(edicao)),
         ),
     ]),
 

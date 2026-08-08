@@ -41,6 +41,13 @@ export const FAIXAS_DE_PRECO = [
   { label: 'Acima de R$ 700', value: 'acima-700' },
 ] as const
 
+/**
+ * O BANCO DE VINHOS
+ *
+ * Cada ficha é uma página que responde uma pergunta inteira sobre uma garrafa.
+ * Uvas, região e importadora são texto simples: escreve-se o nome e pronto,
+ * sem cadastrar nada antes em outra tela. Só nome, tipo e cor são obrigatórios.
+ */
 export const Vinhos: CollectionConfig = {
   slug: 'vinhos',
   labels: { singular: 'Vinho', plural: 'Vinhos' },
@@ -50,8 +57,10 @@ export const Vinhos: CollectionConfig = {
     group: 'Conteúdo',
     description:
       'As fichas. Cada uma é uma página que responde uma pergunta inteira sobre uma garrafa.',
-    preview: (doc) =>
-      `${enderecoDoSite()}/vinhos/${doc?.slug ?? ''}`,
+    livePreview: {
+      url: ({ data }) => `${enderecoDoSite()}/vinhos/${data?.slug ?? ''}`,
+    },
+    preview: (doc) => `${enderecoDoSite()}/vinhos/${doc?.slug ?? ''}`,
   },
   access: {
     read: lerPublicados,
@@ -72,7 +81,7 @@ export const Vinhos: CollectionConfig = {
           label: 'A garrafa',
           fields: [
             { name: 'nome', type: 'text', label: 'Nome do vinho', required: true },
-            { name: 'produtor', type: 'text', label: 'Produtor', required: true, index: true },
+            { name: 'produtor', type: 'text', label: 'Produtor', index: true },
             {
               type: 'row',
               fields: [
@@ -80,14 +89,12 @@ export const Vinhos: CollectionConfig = {
                   name: 'pais',
                   type: 'text',
                   label: 'País',
-                  required: true,
                   index: true,
                   admin: { width: '33%' },
                 },
                 {
                   name: 'regiao',
-                  type: 'relationship',
-                  relationTo: 'regioes',
+                  type: 'text',
                   label: 'Região',
                   admin: { width: '33%' },
                 },
@@ -149,15 +156,17 @@ export const Vinhos: CollectionConfig = {
               type: 'array',
               label: 'Uvas',
               labels: { singular: 'Uva', plural: 'Uvas' },
-              admin: { description: 'Deixe o percentual vazio quando o produtor não informa.' },
+              admin: {
+                description:
+                  'Escreva o nome da uva. Deixe o percentual vazio quando o produtor não informa.',
+              },
               fields: [
                 {
                   type: 'row',
                   fields: [
                     {
                       name: 'uva',
-                      type: 'relationship',
-                      relationTo: 'uvas',
+                      type: 'text',
                       label: 'Uva',
                       required: true,
                       admin: { width: '70%' },
@@ -175,11 +184,6 @@ export const Vinhos: CollectionConfig = {
               ],
             },
             grupoImagemDestaque,
-          ],
-        },
-        {
-          label: 'O veredito',
-          fields: [
             {
               name: 'nota',
               type: 'number',
@@ -196,7 +200,6 @@ export const Vinhos: CollectionConfig = {
               name: 'veredito',
               type: 'textarea',
               label: 'Veredito',
-              required: true,
               maxLength: 480,
               admin: {
                 description:
@@ -214,6 +217,7 @@ export const Vinhos: CollectionConfig = {
               type: 'array',
               label: 'Harmonizações',
               labels: { singular: 'Harmonização', plural: 'Harmonizações' },
+              admin: { initCollapsed: true },
               fields: [
                 { name: 'prato', type: 'text', label: 'Prato ou ingrediente', required: true },
                 { name: 'observacao', type: 'text', label: 'Por quê' },
@@ -248,6 +252,12 @@ export const Vinhos: CollectionConfig = {
               label: 'Decantação',
               admin: { placeholder: 'Abrir uma hora antes' },
             },
+            {
+              type: 'collapsible',
+              label: 'Perguntas e SEO',
+              admin: { initCollapsed: true },
+              fields: [campoFaq, grupoSeo],
+            },
           ],
         },
         {
@@ -278,9 +288,12 @@ export const Vinhos: CollectionConfig = {
             },
             {
               name: 'importadora',
-              type: 'relationship',
-              relationTo: 'importadoras',
+              type: 'group',
               label: 'Importadora',
+              fields: [
+                { name: 'nome', type: 'text', label: 'Nome' },
+                { name: 'url', type: 'text', label: 'Site' },
+              ],
             },
             {
               name: 'ondeComprar',
@@ -299,53 +312,24 @@ export const Vinhos: CollectionConfig = {
             },
           ],
         },
-        {
-          label: 'Relacionados',
-          fields: [
-            {
-              name: 'materiasRelacionadas',
-              type: 'relationship',
-              relationTo: 'materias',
-              hasMany: true,
-              label: 'Matérias que citam este vinho',
-            },
-            {
-              name: 'vinhosSimilares',
-              type: 'relationship',
-              relationTo: 'vinhos',
-              hasMany: true,
-              label: 'Se gostou deste, prove',
-              filterOptions: ({ id }) => ({ id: { not_equals: id } }),
-            },
-            {
-              name: 'guiasRelacionados',
-              type: 'relationship',
-              relationTo: 'guias',
-              hasMany: true,
-              label: 'Guias relacionados',
-            },
-          ],
-        },
-        { label: 'Perguntas e SEO', fields: [campoFaq, grupoSeo] },
       ],
     },
     campoSlug('nome'),
     campoIndiceBusca,
     {
-      name: 'autor',
+      name: 'relacionados',
       type: 'relationship',
-      relationTo: 'autores',
-      label: 'Quem provou',
-      required: true,
-      admin: { position: 'sidebar' },
-    },
-    {
-      name: 'tags',
-      type: 'relationship',
-      relationTo: 'tags',
+      relationTo: ['textos', 'vinhos'],
       hasMany: true,
-      label: 'Tags',
-      admin: { position: 'sidebar' },
+      label: 'Relacionados',
+      admin: {
+        position: 'sidebar',
+        description: 'Vinhos parecidos e textos que citam esta garrafa.',
+      },
+      // Em documento novo ainda não há `id` — sem o guard, a validação do create
+      // compararia com undefined e recusaria qualquer seleção.
+      filterOptions: ({ id, relationTo }) =>
+        relationTo === 'vinhos' && id ? { id: { not_equals: id } } : true,
     },
     campoDataPublicacao,
     campoDataAtualizacao,
@@ -356,13 +340,18 @@ export const Vinhos: CollectionConfig = {
         if (operation === 'update' && originalDoc?._status === 'published') {
           data.dataAtualizacao = new Date().toISOString()
         }
+        const uvas = Array.isArray(data?.uvas)
+          ? data.uvas.map((item: { uva?: string }) => item?.uva).filter(Boolean)
+          : []
         data.indiceBusca = montarIndiceBusca([
           data?.nome,
           data?.produtor,
           data?.pais,
+          data?.regiao,
           data?.subRegiao,
           data?.safra,
           data?.veredito,
+          ...uvas,
         ])
         return data
       },

@@ -3,7 +3,9 @@ import type { Where } from 'payload'
 
 import { normalizarParaBusca } from '@/fields/busca'
 import { obterPayload } from '@/lib/payload'
-import type { Edicao, Evento, Guia, Materia, Vinho } from '@/payload-types'
+import { enderecoDoTexto, type Secao } from '@/lib/secoes'
+import { resumoOuTrecho } from '@/lib/texto'
+import type { Texto, Vinho } from '@/payload-types'
 
 /**
  * CONSULTAS DO SITE
@@ -14,9 +16,9 @@ import type { Edicao, Evento, Guia, Materia, Vinho } from '@/payload-types'
  * dezoito páginas.
  *
  * `depth` merece explicação: é quantos níveis de relacionamento o Payload traz junto.
- * `depth: 1` traz a categoria e o autor como objetos; `depth: 2` traz também a foto
- * do autor. Cada nível a mais é uma consulta a mais no banco, então usamos o menor
- * número que a página realmente precisa.
+ * `depth: 1` traz a imagem de destaque como objeto; `depth: 2` traz também os
+ * relacionados populados. Cada nível a mais é uma consulta a mais no banco, então
+ * usamos o menor número que a página realmente precisa.
  */
 
 /** Só conteúdo publicado e com data de publicação já passada. */
@@ -38,28 +40,39 @@ const combinar = (...condicoes: (Where | undefined)[]): Where => {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Matérias                                                                    */
+/* Textos — matérias, edições do boletim e guias, numa coleção só              */
 /* -------------------------------------------------------------------------- */
 
-export const listarMaterias = cache(
+/** A ordenação natural de cada seção: cronológica, por número ou alfabética. */
+const ORDEM_PADRAO: Record<Secao, string> = {
+  materia: '-dataPublicacao',
+  boletim: '-numero',
+  guia: 'titulo',
+}
+
+export const listarTextos = cache(
   async (opcoes: {
+    secao: Secao
     limite?: number
     pagina?: number
     categoria?: string
-    tag?: string
+    tipoGuia?: string
+    nivel?: string
     excluirIds?: number[]
+    ordem?: string
     depth?: number
-  } = {}) => {
+  }) => {
     const payload = await obterPayload()
-    const filtros: Where[] = [publicado()]
-    if (opcoes.categoria) filtros.push({ 'categoria.slug': { equals: opcoes.categoria } })
-    if (opcoes.tag) filtros.push({ 'tags.slug': { equals: opcoes.tag } })
+    const filtros: Where[] = [publicado(), { secao: { equals: opcoes.secao } }]
+    if (opcoes.categoria) filtros.push({ categoria: { equals: opcoes.categoria } })
+    if (opcoes.tipoGuia) filtros.push({ tipoGuia: { equals: opcoes.tipoGuia } })
+    if (opcoes.nivel) filtros.push({ nivel: { equals: opcoes.nivel } })
     if (opcoes.excluirIds?.length) filtros.push({ id: { not_in: opcoes.excluirIds } })
 
     return payload.find({
-      collection: 'materias',
+      collection: 'textos',
       where: combinar(...filtros),
-      sort: '-dataPublicacao',
+      sort: opcoes.ordem ?? ORDEM_PADRAO[opcoes.secao],
       limit: opcoes.limite ?? 12,
       page: opcoes.pagina ?? 1,
       depth: opcoes.depth ?? 1,
@@ -68,24 +81,32 @@ export const listarMaterias = cache(
   },
 )
 
-export const obterMateria = cache(async (slug: string): Promise<Materia | null> => {
-  const payload = await obterPayload()
-  const resultado = await payload.find({
-    collection: 'materias',
-    where: combinar(publicado(), { slug: { equals: slug } }),
-    limit: 1,
-    depth: 2,
-    overrideAccess: false,
-  })
-  return resultado.docs[0] ?? null
-})
+/**
+ * Um texto pelo slug, DENTRO da seção pedida.
+ *
+ * A seção faz parte do endereço: um guia não pode responder em /materias/…, então
+ * a consulta filtra pelas duas coisas e a URL errada devolve 404, não conteúdo.
+ */
+export const obterTexto = cache(
+  async (secao: Secao, slug: string): Promise<Texto | null> => {
+    const payload = await obterPayload()
+    const resultado = await payload.find({
+      collection: 'textos',
+      where: combinar(publicado(), { secao: { equals: secao } }, { slug: { equals: slug } }),
+      limit: 1,
+      depth: 2,
+      overrideAccess: false,
+    })
+    return resultado.docs[0] ?? null
+  },
+)
 
 /** A manchete: a matéria marcada como candidata mais recente, ou a mais recente. */
-export const obterManchete = cache(async (): Promise<Materia | null> => {
+export const obterManchete = cache(async (): Promise<Texto | null> => {
   const payload = await obterPayload()
   const destacada = await payload.find({
-    collection: 'materias',
-    where: combinar(publicado(), { destaqueHome: { equals: true } }),
+    collection: 'textos',
+    where: combinar(publicado(), { secao: { equals: 'materia' } }, { destaqueHome: { equals: true } }),
     sort: '-dataPublicacao',
     limit: 1,
     depth: 2,
@@ -94,8 +115,8 @@ export const obterManchete = cache(async (): Promise<Materia | null> => {
   if (destacada.docs[0]) return destacada.docs[0]
 
   const recente = await payload.find({
-    collection: 'materias',
-    where: publicado(),
+    collection: 'textos',
+    where: combinar(publicado(), { secao: { equals: 'materia' } }),
     sort: '-dataPublicacao',
     limit: 1,
     depth: 2,
@@ -104,53 +125,23 @@ export const obterManchete = cache(async (): Promise<Materia | null> => {
   return recente.docs[0] ?? null
 })
 
-/* -------------------------------------------------------------------------- */
-/* Edições do Boletim                                                          */
-/* -------------------------------------------------------------------------- */
-
-export const listarEdicoes = cache(
-  async (opcoes: { limite?: number; pagina?: number; ordem?: 'asc' | 'desc' } = {}) => {
-    const payload = await obterPayload()
-    return payload.find({
-      collection: 'edicoes',
-      where: publicado(),
-      sort: opcoes.ordem === 'asc' ? 'numero' : '-numero',
-      limit: opcoes.limite ?? 100,
-      page: opcoes.pagina ?? 1,
-      depth: 1,
-      overrideAccess: false,
-    })
-  },
-)
-
-export const obterEdicao = cache(async (slug: string): Promise<Edicao | null> => {
-  const payload = await obterPayload()
-  const resultado = await payload.find({
-    collection: 'edicoes',
-    where: combinar(publicado(), { slug: { equals: slug } }),
-    limit: 1,
-    depth: 2,
-    overrideAccess: false,
-  })
-  return resultado.docs[0] ?? null
-})
-
 /** Edição anterior e seguinte, para navegar o arquivo sem voltar ao índice. */
 export const obterVizinhasDaEdicao = cache(
-  async (numero: number): Promise<{ anterior: Edicao | null; proxima: Edicao | null }> => {
+  async (numero: number): Promise<{ anterior: Texto | null; proxima: Texto | null }> => {
     const payload = await obterPayload()
+    const boletim: Where = { secao: { equals: 'boletim' } }
     const [anterior, proxima] = await Promise.all([
       payload.find({
-        collection: 'edicoes',
-        where: combinar(publicado(), { numero: { less_than: numero } }),
+        collection: 'textos',
+        where: combinar(publicado(), boletim, { numero: { less_than: numero } }),
         sort: '-numero',
         limit: 1,
         depth: 0,
         overrideAccess: false,
       }),
       payload.find({
-        collection: 'edicoes',
-        where: combinar(publicado(), { numero: { greater_than: numero } }),
+        collection: 'textos',
+        where: combinar(publicado(), boletim, { numero: { greater_than: numero } }),
         sort: 'numero',
         limit: 1,
         depth: 0,
@@ -186,7 +177,8 @@ export const listarVinhos = cache(async (filtros: FiltrosDeVinho = {}) => {
   if (filtros.preco?.length) condicoes.push({ faixaPreco: { in: filtros.preco } })
   if (filtros.cor?.length) condicoes.push({ corNaEscala: { in: filtros.cor } })
   if (filtros.corpo?.length) condicoes.push({ corpo: { in: filtros.corpo } })
-  if (filtros.uva?.length) condicoes.push({ 'uvas.uva.slug': { in: filtros.uva } })
+  // A uva é texto na ficha; o filtro compara o nome como está escrito.
+  if (filtros.uva?.length) condicoes.push({ 'uvas.uva': { in: filtros.uva } })
 
   const ordenacao = {
     recentes: '-dataPublicacao',
@@ -220,23 +212,20 @@ export const obterVinho = cache(async (slug: string): Promise<Vinho | null> => {
 /** Valores realmente presentes no acervo — para montar filtros sem opções mortas. */
 export const opcoesDeFiltroDeVinho = cache(async () => {
   const payload = await obterPayload()
-  const [vinhos, uvas] = await Promise.all([
-    payload.find({
-      collection: 'vinhos',
-      where: publicado(),
-      limit: 1000,
-      depth: 1,
-      select: { pais: true, tipo: true, faixaPreco: true, corNaEscala: true, uvas: true },
-      overrideAccess: false,
-    }),
-    payload.find({ collection: 'uvas', limit: 500, depth: 0, sort: 'nome', overrideAccess: false }),
-  ])
+  const vinhos = await payload.find({
+    collection: 'vinhos',
+    where: publicado(),
+    limit: 1000,
+    depth: 0,
+    select: { pais: true, tipo: true, faixaPreco: true, corNaEscala: true, uvas: true },
+    overrideAccess: false,
+  })
 
   const paises = new Set<string>()
   const tipos = new Set<string>()
   const precos = new Set<string>()
   const cores = new Set<string>()
-  const uvasUsadas = new Set<string>()
+  const uvas = new Set<string>()
 
   vinhos.docs.forEach((vinho) => {
     if (vinho.pais) paises.add(vinho.pais)
@@ -244,104 +233,21 @@ export const opcoesDeFiltroDeVinho = cache(async () => {
     if (vinho.faixaPreco) precos.add(vinho.faixaPreco)
     if (vinho.corNaEscala) cores.add(vinho.corNaEscala)
     vinho.uvas?.forEach((item) => {
-      const uva = item.uva && typeof item.uva === 'object' ? item.uva : null
-      if (uva?.slug) uvasUsadas.add(uva.slug)
+      if (item.uva) uvas.add(item.uva)
     })
   })
 
+  const ordenar = (valores: Set<string>) =>
+    Array.from(valores).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+
   return {
-    paises: Array.from(paises).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    paises: ordenar(paises),
     tipos: Array.from(tipos),
     precos: Array.from(precos),
     cores: Array.from(cores),
-    uvas: uvas.docs
-      .filter((uva) => uva.slug && uvasUsadas.has(uva.slug))
-      .map((uva) => ({ slug: uva.slug!, nome: uva.nome })),
+    uvas: ordenar(uvas),
     total: vinhos.totalDocs,
   }
-})
-
-/* -------------------------------------------------------------------------- */
-/* Guias                                                                       */
-/* -------------------------------------------------------------------------- */
-
-export const listarGuias = cache(
-  async (opcoes: { limite?: number; pagina?: number; tipo?: string; nivel?: string } = {}) => {
-    const payload = await obterPayload()
-    const condicoes: Where[] = [publicado()]
-    if (opcoes.tipo) condicoes.push({ tipoGuia: { equals: opcoes.tipo } })
-    if (opcoes.nivel) condicoes.push({ nivel: { equals: opcoes.nivel } })
-
-    return payload.find({
-      collection: 'guias',
-      where: combinar(...condicoes),
-      sort: 'titulo',
-      limit: opcoes.limite ?? 50,
-      page: opcoes.pagina ?? 1,
-      depth: 1,
-      overrideAccess: false,
-    })
-  },
-)
-
-export const obterGuia = cache(async (slug: string): Promise<Guia | null> => {
-  const payload = await obterPayload()
-  const resultado = await payload.find({
-    collection: 'guias',
-    where: combinar(publicado(), { slug: { equals: slug } }),
-    limit: 1,
-    depth: 2,
-    overrideAccess: false,
-  })
-  return resultado.docs[0] ?? null
-})
-
-/* -------------------------------------------------------------------------- */
-/* Eventos                                                                     */
-/* -------------------------------------------------------------------------- */
-
-export const listarEventos = cache(
-  async (opcoes: { futuros?: boolean; limite?: number } = {}): Promise<Evento[]> => {
-    const payload = await obterPayload()
-    const condicoes: Where[] = [{ _status: { equals: 'published' } }]
-    if (opcoes.futuros !== false) {
-      // Um evento continua na agenda até o fim do dia em que acontece.
-      const inicioDeHoje = new Date()
-      inicioDeHoje.setHours(0, 0, 0, 0)
-      condicoes.push({
-        or: [
-          { data: { greater_than_equal: inicioDeHoje.toISOString() } },
-          { dataFim: { greater_than_equal: inicioDeHoje.toISOString() } },
-        ],
-      })
-    }
-
-    const resultado = await payload.find({
-      collection: 'eventos',
-      where: combinar(...condicoes),
-      sort: 'data',
-      limit: opcoes.limite ?? 60,
-      depth: 1,
-      overrideAccess: false,
-    })
-    return resultado.docs
-  },
-)
-
-/* -------------------------------------------------------------------------- */
-/* Autora                                                                      */
-/* -------------------------------------------------------------------------- */
-
-export const obterAutoraPrincipal = cache(async () => {
-  const payload = await obterPayload()
-  const resultado = await payload.find({
-    collection: 'autores',
-    limit: 1,
-    depth: 2,
-    sort: 'createdAt',
-    overrideAccess: false,
-  })
-  return resultado.docs[0] ?? null
 })
 
 /* -------------------------------------------------------------------------- */
@@ -349,7 +255,7 @@ export const obterAutoraPrincipal = cache(async () => {
 /* -------------------------------------------------------------------------- */
 
 export type ResultadoDeBusca = {
-  tipo: 'materia' | 'edicao' | 'vinho' | 'guia'
+  tipo: Secao | 'vinho'
   id: number
   titulo: string
   resumo?: string | null
@@ -384,18 +290,11 @@ export const buscar = cache(async (termo: string): Promise<ResultadoDeBusca[]> =
   }
 
   const payload = await obterPayload()
-  const [materias, edicoes, vinhos, guias] = await Promise.all([
+  const [textos, vinhos] = await Promise.all([
     payload.find({
-      collection: 'materias',
+      collection: 'textos',
       where: combinar(publicado(), contem),
-      limit: 12,
-      depth: 0,
-      overrideAccess: false,
-    }),
-    payload.find({
-      collection: 'edicoes',
-      where: combinar(publicado(), contem),
-      limit: 12,
+      limit: 36,
       depth: 0,
       overrideAccess: false,
     }),
@@ -406,31 +305,18 @@ export const buscar = cache(async (termo: string): Promise<ResultadoDeBusca[]> =
       depth: 0,
       overrideAccess: false,
     }),
-    payload.find({
-      collection: 'guias',
-      where: combinar(publicado(), contem),
-      limit: 12,
-      depth: 0,
-      overrideAccess: false,
-    }),
   ])
 
   return [
-    ...materias.docs.map((doc) => ({
-      tipo: 'materia' as const,
+    ...textos.docs.map((doc) => ({
+      tipo: (doc.secao ?? 'materia') as Secao,
       id: doc.id,
-      titulo: doc.titulo,
-      resumo: doc.resumo,
-      endereco: `/materias/${doc.slug}`,
-      chipCor: doc.chipCor,
-      data: doc.dataPublicacao,
-    })),
-    ...guias.docs.map((doc) => ({
-      tipo: 'guia' as const,
-      id: doc.id,
-      titulo: doc.titulo,
-      resumo: doc.resumo,
-      endereco: `/guias/${doc.slug}`,
+      titulo:
+        doc.secao === 'boletim' && doc.numero
+          ? `Edição ${doc.numero}: ${doc.titulo}`
+          : doc.titulo,
+      resumo: resumoOuTrecho(doc),
+      endereco: enderecoDoTexto(doc),
       chipCor: doc.chipCor,
       data: doc.dataAtualizacao ?? doc.dataPublicacao,
     })),
@@ -442,15 +328,6 @@ export const buscar = cache(async (termo: string): Promise<ResultadoDeBusca[]> =
       endereco: `/vinhos/${doc.slug}`,
       chipCor: doc.corNaEscala,
       data: doc.dataPublicacao,
-    })),
-    ...edicoes.docs.map((doc) => ({
-      tipo: 'edicao' as const,
-      id: doc.id,
-      titulo: `Edição ${doc.numero}: ${doc.titulo}`,
-      resumo: doc.resumo,
-      endereco: `/boletim/${doc.slug}`,
-      chipCor: doc.chipCor,
-      data: doc.dataEnvio,
     })),
   ]
 })
