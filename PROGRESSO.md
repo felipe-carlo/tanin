@@ -187,19 +187,27 @@ Autor, criar Categoria, subir Mídia) antes de escrever a primeira linha.
   reescrito preservando todo o conteúdo editorial de exemplo (agora 40 textos e 16
   fichas), e a importação do beehiiv grava direto em Textos.
 
-### 🔴 Atenção no próximo deploy
+### A virada do banco — já feita, e sem ninguém tocar no Supabase ✅
 
-O banco de produção (Supabase) ainda tem as tabelas do modelo antigo, e as migrações
-antigas não existem mais. **Antes do primeiro deploy desta versão**, rode no SQL editor
-do Supabase:
+O banco de produção estava com o esquema antigo, e os dois modelos se sobrepunham: 28
+tabelas e 16 tipos enum com o mesmo nome. O `payload migrate` do build teria parado no
+primeiro `CREATE TYPE`.
 
-```sql
-drop schema public cascade; create schema public;
-```
+A solução ficou no próprio código: `src/migrations/20260808_020000_limpeza_do_modelo_antigo.ts`,
+com carimbo de hora anterior ao da migração inicial, derruba as tabelas e os tipos que
+encontrar antes de o modelo novo ser criado. Rodou sozinha no deploy.
 
-Sem isso o `payload migrate` do build falha. Isso apaga também os usuários do painel —
-abra `/admin` depois do deploy e crie o primeiro acesso de novo (a primeira pessoa vira
-administradora). Arquivos órfãos no bucket de mídia são inofensivos.
+Ela preserva `payload_migrations` — o Payload grava o registro de cada migração logo
+depois do `up()`, na mesma transação, então a tabela precisa estar de pé naquele instante
+— e a cria quando ainda não existe, que é o caso de um banco virgem, onde a limpeza é a
+primeira coisa a rodar.
+
+**Confirmado em produção:** `textos` e `vinhos` respondem; `materias`, `edicoes`,
+`guias`, `eventos`, `autores`, `categorias`, `tags` e `uvas` não existem mais.
+
+Como o esquema foi recriado do zero, os usuários do painel se foram junto. Ou se cria o
+primeiro acesso em `/admin` (a primeira pessoa vira administradora), ou ele vem com o
+seed. Arquivos órfãos no bucket de mídia são inofensivos.
 
 ---
 
