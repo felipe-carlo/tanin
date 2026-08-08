@@ -10,10 +10,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:vercel": "payload migrate && next build",
+    "build:vercel": "tsx scripts/conferir-ambiente.ts && payload migrate && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "conferir:ambiente": "tsx scripts/conferir-ambiente.ts",
     "testar:banco": "tsx scripts/testar-banco.ts",
     "migrate": "payload migrate",
     "migrate:criar": "payload migrate:create",

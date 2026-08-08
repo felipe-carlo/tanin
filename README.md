@@ -129,14 +129,18 @@ subir para produção, `pnpm migrate:criar <nome-do-que-mudou>`.
 
    Acrescente também `DATABASE_SSL=true` — o Supabase exige conexão criptografada.
 
-   > **Copie a linha do painel, não monte à mão.** O nome do servidor do pooler carrega
-   > a região *e* um número de fragmento (`aws-0`, `aws-1`…) que muda de projeto para
-   > projeto. Errar qualquer um dos dois derruba o deploy com
-   > `tenant or user not found`. Para conferir antes de subir:
-   > `pnpm testar:banco 'postgresql://...'`
+   > **A janela `Connect` do Supabase oferece três endereços. Só um serve aqui.**
    >
-   > O botão **Connect** fica no topo da tela do projeto, ao lado do nome dele — não
-   > dentro de *Project Settings*, onde já esteve.
+   > | Aba | Endereço | Serve na Vercel? |
+   > | --- | --- | --- |
+   > | Direct connection | `db.SEU-PROJETO.supabase.co:5432` | **Não.** Só responde em IPv6, e a Vercel não tem rota IPv6 — o build morre com `ENETUNREACH`. |
+   > | Session pooler | `aws-N-REGIAO.pooler.supabase.com:5432` | Funciona, mas segura cada conexão até o fim; em pico, esgota o limite. |
+   > | **Transaction pooler** | `aws-N-REGIAO.pooler.supabase.com:**6543**` | **Sim — use esta.** |
+   >
+   > Confira antes de subir: `pnpm conferir:ambiente` avisa se o endereço é do tipo
+   > errado, e `pnpm testar:banco 'postgresql://...'` tenta conectar de verdade.
+   > O `build:vercel` roda a primeira conferência sozinho, então um endereço errado
+   > para com uma frase em português em vez de um despejo de pilha.
 
 3. **O primeiro deploy cria o banco sozinho.** O comando de build roda `payload migrate`
    antes de construir, e as migrações estão versionadas em `src/migrations/`. Você não
