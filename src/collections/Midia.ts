@@ -41,10 +41,16 @@ export const Midia: CollectionConfig = {
       name: 'alt',
       type: 'text',
       label: 'Texto alternativo',
-      required: true,
+      /**
+       * Deixou de ser obrigatório de propósito. Exigir a descrição no meio do upload
+       * interrompe a escrita — e a interrupção, na prática, produz `alt="imagem"`, que
+       * é pior do que nada para quem usa leitor de tela. Sem descrição, a legenda
+       * assume; sem legenda, a imagem entra como decorativa, que é a marcação correta
+       * para uma foto que o texto ao redor já explica.
+       */
       admin: {
         description:
-          'Descreva a imagem para quem não pode vê-la. É lido por leitores de tela e pelos buscadores.',
+          'Descreve a imagem para quem não pode vê-la. Se ficar em branco, usamos a legenda.',
       },
     },
     {

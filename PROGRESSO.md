@@ -3,7 +3,7 @@
 Documento de acompanhamento. Cada fase registra **o que foi feito**, **o que ficou
 pendente** e **o que precisa de decisão sua**.
 
-Última atualização: fases 1 a 7 concluídas.
+Última atualização: fases 1 a 8 concluídas. A fase 8 mudou a tela de escrever — leia primeiro.
 
 ---
 
@@ -211,6 +211,78 @@ seed. Arquivos órfãos no bucket de mídia são inofensivos.
 
 ---
 
+## Fase 8 — A página em branco ✅
+
+A fase 7 tinha reduzido o modelo de quatorze coleções para cinco e o formulário a uma
+tela só. Faltava a parte que se sente: **a tela de escrever ainda era um formulário**.
+Título era um `input` com rótulo em cima, e a barra lateral carregava dezesseis campos.
+
+**Feito**
+
+- **A tela de escrita** (`/admin` → Textos → Criar). Três coisas: título em Fraunces
+  grande, subtítulo, e a página em branco. Nenhum rótulo, nenhuma aba, nenhuma barra
+  lateral. `Enter` no título desce para o subtítulo, `Enter` no subtítulo desce para o
+  texto. No alto, uma linha: *"rascunho salvo às 14:32"*. O salvamento automático, os
+  rascunhos, o agendamento, as versões e a pré-visualização continuam sendo os do
+  Payload — nada disso foi reescrito. São componentes de campo (`admin.components.Field`
+  com `useField`), um componente em `admin.components.edit.beforeDocumentControls` e um
+  bloco de CSS escopado em `painel.css`. Nenhuma superfície instável da API.
+- **O motor editorial** (`src/lib/texto.ts`, estendido). A cada salvamento ele lê o
+  texto **uma vez só** e deriva: **resumo** (primeiro parágrafo), **imagem principal**,
+  **palavras-chave**, **tempo de leitura**, **índice de busca** e **cor do cartão**.
+  Antes eram três varreduras da árvore do texto por salvamento — e o salvamento é a cada
+  segundo e meio, enquanto a pessoa digita.
+- **A imagem principal se escolhe dentro do texto.** Não há campo de capa. Arraste
+  quantas imagens quiser e marque *"usar como imagem principal do texto"* na que
+  representa o texto fora dele — no cartão da home, no Google, no WhatsApp. Sem marcar
+  nenhuma, vale a primeira.
+- **A busca passou a ler o corpo inteiro.** Antes indexava título, subtítulo e resumo:
+  uma uva citada no quinto parágrafo não era encontrável. Agora é.
+- **O texto alternativo das imagens deixou de ser obrigatório.** Exigir a descrição no
+  meio do upload interrompe a escrita, e interrupção produz `alt="imagem"` — pior que
+  nada para quem usa leitor de tela. Sem descrição, a legenda assume; sem legenda, a
+  imagem entra como decorativa, que é a marcação correta.
+- **Um tipo só de texto.** Seção, editoria, tipo de guia, nível e número de edição
+  saíram do formulário. `/boletim` e `/guias` saíram do site, com 301 para o índice de
+  textos. **Nada foi apagado**: os campos continuam declarados com `hidden: true`, as
+  colunas continuam no banco, e os textos antigos gravados como boletim ou guia
+  respondem em `/materias/:slug` em vez de ficarem apontando para rota morta.
+- **O importador do beehiiv agora traz as imagens.** Antes cada `<img>` virava uma marca
+  em itálico com o endereço, para alguém baixar e subir à mão depois. Com a capa saindo
+  do corpo do texto, isso deixaria todo texto importado sem capa e com sujeira no meio.
+  Agora ele baixa, cria no acervo de mídia e marca a primeira como principal — com cache
+  por endereço (a logomarca de rodapé entra uma vez, não sessenta) e descarte do pixel
+  de rastreio de abertura.
+
+**Conferido**
+
+| O quê | Resultado |
+| --- | --- |
+| Tela de escrita | 3 campos visíveis, zero abas, zero barra lateral |
+| Escrever e publicar pelo navegador | título, subtítulo e corpo salvos; `<title>`, descrição, canônica e JSON-LD `Article` preenchidos sem tocar em campo de SEO |
+| Imagem principal | com duas imagens e a segunda marcada, a capa é a segunda |
+| Busca no corpo | "zelandia" encontra texto onde a palavra só aparece no quarto parágrafo |
+| Redirecionamentos | `/boletim`, `/guias`, `/agenda` e `/boletim/:slug` em 301 |
+| Migração | aditiva; rodada duas vezes seguidas sem efeito na segunda |
+| Build e tipos | passam |
+
+**Por que a migração é escrita à mão**
+
+O `payload migrate:create` geraria os `DROP COLUMN` de tudo o que saiu do formulário.
+Esses campos não foram apagados, foram escondidos — e coluna anulável que ninguém
+declara não custa quase nada num Postgres, enquanto perder o conteúdo custa o conteúdo.
+A migração acrescenta duas colunas (`capa_id`, `palavras_chave`) e dois índices, e nada
+mais.
+
+**Fica dormindo**
+
+`src/lib/categorias.ts` (as seis editorias), `extrairIndice` (o índice "Nesta edição"),
+a numeração automática do boletim, o grupo de imagem de destaque nos textos, e os
+blocos `fichaVinho` e `listaNumerada` do editor. Tudo no código, sem chamador. Vinhos
+não foi tocado.
+
+---
+
 ## Decisões que tomei sozinho — e que você pode reverter
 
 Estas apareceram no meio do caminho. Registrei a escolha e o motivo; nenhuma é cara de
@@ -249,6 +321,13 @@ WhatsApp, e o buscador consegue percorrer o acervo inteiro.
 ---
 
 ## O que precisa de você
+
+### 🟡 0. O menu do site, no painel
+
+O menu do cabeçalho vem de **Configurações do site → Menu e rodapé** e vence o padrão do
+código. Se o menu de produção ainda listar Boletim e Guias, esses itens levam a um
+redirecionamento — funciona, mas promete quatro lugares e entrega dois. Deixe três:
+Textos, Vinhos, Sobre.
 
 ### 🔴 1. Colar as variáveis na Vercel — e trocar a senha do banco depois
 

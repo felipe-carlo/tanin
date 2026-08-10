@@ -3,12 +3,12 @@ import type { CollectionConfig, Field } from 'payload'
 import { enderecoDoSite } from '@/lib/endereco'
 import { enderecoDoTexto, OPCOES_SECAO } from '@/lib/secoes'
 import { OPCOES_CATEGORIA } from '@/lib/categorias'
-import { estimarTempoLeitura, resumoOuTrecho } from '@/lib/texto'
+import { derivarChipCor, derivarPalavrasChave, lerCorpo, trechoDeLeitura } from '@/lib/texto'
 import { autenticado, lerPublicados, somenteAdministrador } from '@/lib/acesso'
 import { ganchosDeRevalidacaoPorSecao } from '@/hooks/revalidar'
 import { editorTanin } from '@/fields/editor'
 import { campoFaq, grupoSeo } from '@/fields/seo'
-import { campoSlug } from '@/fields/slug'
+import { campoSlugOculto } from '@/fields/slug'
 import { campoIndiceBusca, montarIndiceBusca } from '@/fields/busca'
 import {
   campoChipCor,
@@ -28,13 +28,29 @@ export const TIPOS_DE_GUIA = [
   { label: 'Tema técnico', value: 'tecnico' },
 ] as const
 
+/** Esconde um campo do formulário sem tirá-lo do banco. */
+const oculto = <T extends Field>(campo: T): T =>
+  ({ ...campo, admin: { ...(campo as { admin?: object }).admin, hidden: true } }) as T
+
 /**
- * A COLEÇÃO ÚNICA DE TEXTOS
+ * A COLEÇÃO DE TEXTOS
  *
- * Tudo que se escreve no portal mora aqui: matérias, edições do boletim e guias.
- * O campo `secao` decide a forma e o endereço; o formulário é um só — texto no
- * centro, metadados na lateral — e nada além de título e corpo é obrigatório.
- * Escrever é abrir, digitar e publicar.
+ * O formulário pede três coisas: **título, subtítulo e o texto**. Mais nada.
+ *
+ * Todo o resto — o resumo que buscadores e IAs citam, o endereço da página, a imagem
+ * que aparece no WhatsApp, as palavras-chave, o tempo de leitura, o que a busca indexa,
+ * a cor do cartão — é derivado do próprio texto pelo motor editorial (`src/lib/texto.ts`)
+ * no momento de salvar. Os campos existem no banco; só não existem na tela.
+ *
+ * A razão é simples: um formulário longo é uma lista de tarefas antes de escrever. Quem
+ * publica toda semana abandona a lista, e o site fica com metade dos campos vazios — a
+ * pior versão dos dois mundos, porque o formulário continua lá atrapalhando sem que
+ * ninguém colha o benefício. Melhor o site fazer o trabalho.
+ *
+ * **O que está escondido continua existindo.** Seção, editoria, imagem de destaque,
+ * FAQ, SEO, número de edição, relacionados: os campos seguem declarados, com os dados
+ * intactos, para o dia em que o acervo justificar trazê-los de volta. Apagar a
+ * declaração apagaria a coluna na próxima migração.
  */
 export const Textos: CollectionConfig = {
   slug: 'textos',
@@ -43,15 +59,19 @@ export const Textos: CollectionConfig = {
   labels: { singular: 'Texto', plural: 'Textos' },
   admin: {
     useAsTitle: 'titulo',
-    defaultColumns: ['titulo', 'secao', 'dataPublicacao', '_status'],
+    defaultColumns: ['titulo', 'dataPublicacao', '_status'],
     group: 'Conteúdo',
-    description:
-      'Tudo que se escreve: matérias, edições do boletim e guias. A seção, na lateral, decide onde o texto aparece.',
+    description: 'Tudo o que a Tanin publica.',
     livePreview: {
       url: ({ data }) => `${enderecoDoSite()}${enderecoDoTexto(data)}`,
     },
     preview: (doc) =>
       `${enderecoDoSite()}${enderecoDoTexto(doc as { secao?: string; slug?: string })}`,
+    components: {
+      edit: {
+        beforeDocumentControls: ['@/admin/BarraDeEscrita#BarraDeEscrita'],
+      },
+    },
   },
   access: {
     read: lerPublicados,
@@ -68,43 +88,61 @@ export const Textos: CollectionConfig = {
   },
   defaultSort: '-dataPublicacao',
   fields: [
-    /* A coluna de escrever: só o que é texto. */
-    { name: 'titulo', type: 'text', label: 'Título', required: true },
+    /* ------------------------------------------------------------------ */
+    /* O que se escreve                                                    */
+    /* ------------------------------------------------------------------ */
+    {
+      name: 'titulo',
+      type: 'text',
+      label: 'Título',
+      required: true,
+      admin: { components: { Field: '@/admin/campos/CampoTitulo#CampoTitulo' } },
+    },
     {
       name: 'subtitulo',
       type: 'textarea',
       label: 'Subtítulo',
       maxLength: 240,
-      admin: { description: 'A linha fina, logo abaixo do título.' },
+      admin: { components: { Field: '@/admin/campos/CampoSubtitulo#CampoSubtitulo' } },
     },
-    campoResumo(false),
     {
       name: 'corpo',
       type: 'richText',
-      label: 'Corpo',
+      label: 'Texto',
       editor: editorTanin,
       required: true,
     },
-    {
-      name: 'paraLevar',
-      type: 'array',
-      label: 'O que levar deste guia',
-      labels: { singular: 'Ponto', plural: 'Pontos' },
-      admin: {
-        condition: (data) => data?.secao === 'guia',
-        description:
-          'Três a cinco frases curtas e auto-contidas. Abrem o guia e são o pedaço mais citável da página.',
-      },
-      fields: [{ name: 'texto', type: 'text', label: 'Ponto', required: true }],
-    },
-    {
-      type: 'collapsible',
-      label: 'Perguntas e SEO',
-      admin: { initCollapsed: true },
-      fields: [campoFaq, grupoSeo],
-    },
 
-    /* A lateral: metadados, quase tudo preenchido sozinho ou opcional. */
+    /* ------------------------------------------------------------------ */
+    /* O que o motor preenche                                              */
+    /* ------------------------------------------------------------------ */
+    campoSlugOculto('textos'),
+    campoIndiceBusca,
+    oculto(campoResumo(false)),
+    {
+      name: 'capa',
+      type: 'upload',
+      relationTo: 'midia',
+      label: 'Imagem principal',
+      admin: { hidden: true, disableBulkEdit: true },
+    },
+    {
+      name: 'palavrasChave',
+      type: 'text',
+      admin: { hidden: true, disableBulkEdit: true },
+    },
+    {
+      name: 'tempoLeitura',
+      type: 'number',
+      admin: { hidden: true, disableBulkEdit: true },
+    },
+    oculto(campoChipCor),
+    oculto(campoDataPublicacao),
+    oculto(campoDataAtualizacao),
+
+    /* ------------------------------------------------------------------ */
+    /* Guardados: fora da tela, dentro do banco                            */
+    /* ------------------------------------------------------------------ */
     {
       name: 'secao',
       type: 'select',
@@ -112,11 +150,12 @@ export const Textos: CollectionConfig = {
       required: true,
       defaultValue: 'materia',
       index: true,
+      // As três opções continuam declaradas de propósito: elas são o enum
+      // `enum_textos_secao` no Postgres. Reduzir a lista geraria um ALTER TYPE
+      // derrubando valores — destrutivo contra as linhas de boletim e guia que já
+      // existem. Escondido e com padrão, o campo nunca aparece e nunca bloqueia.
       options: [...OPCOES_SECAO],
-      admin: {
-        position: 'sidebar',
-        description: 'Decide onde o texto mora no site: /materias, /boletim ou /guias.',
-      },
+      admin: { hidden: true, disableBulkEdit: true },
     },
     {
       name: 'categoria',
@@ -124,11 +163,7 @@ export const Textos: CollectionConfig = {
       label: 'Editoria',
       index: true,
       options: [...OPCOES_CATEGORIA],
-      admin: {
-        position: 'sidebar',
-        condition: (data) => data?.secao === 'materia',
-        description: 'Opcional. Sem editoria, a matéria aparece só no recorte "Tudo".',
-      },
+      admin: { hidden: true, disableBulkEdit: true },
     },
     {
       name: 'tipoGuia',
@@ -136,11 +171,7 @@ export const Textos: CollectionConfig = {
       label: 'Tipo de guia',
       index: true,
       options: [...TIPOS_DE_GUIA],
-      admin: {
-        position: 'sidebar',
-        condition: (data) => data?.secao === 'guia',
-        description: 'Se ficar vazio, entra como "Tema técnico".',
-      },
+      admin: { hidden: true, disableBulkEdit: true },
     },
     {
       name: 'nivel',
@@ -150,11 +181,7 @@ export const Textos: CollectionConfig = {
         { label: 'Iniciante', value: 'iniciante' },
         { label: 'Intermediário', value: 'intermediario' },
       ],
-      admin: {
-        position: 'sidebar',
-        condition: (data) => data?.secao === 'guia',
-        description: 'Se ficar vazio, entra como "Iniciante".',
-      },
+      admin: { hidden: true, disableBulkEdit: true },
     },
     {
       name: 'numero',
@@ -162,32 +189,29 @@ export const Textos: CollectionConfig = {
       label: 'Número da edição',
       unique: true,
       index: true,
-      admin: {
-        position: 'sidebar',
-        readOnly: true,
-        condition: (data) => data?.secao === 'boletim',
-        description: 'Numerada sozinha ao publicar: a próxima edição é sempre a maior + 1.',
-      },
+      admin: { hidden: true, disableBulkEdit: true },
       hooks: {
-        // Duplicar uma edição não pode carregar o número junto — ele é único.
+        // Duplicar um texto não pode carregar o número junto — ele é único.
         beforeDuplicate: [() => undefined],
       },
     },
-    // O mesmo grupo de imagem das fichas de vinho; aqui ele mora na lateral.
-    { ...grupoImagemDestaque, admin: { position: 'sidebar' } } as Field,
-    campoChipCor,
-    campoDataPublicacao,
-    campoDataAtualizacao,
+    {
+      name: 'paraLevar',
+      type: 'array',
+      label: 'O que levar deste guia',
+      labels: { singular: 'Ponto', plural: 'Pontos' },
+      admin: { hidden: true },
+      fields: [{ name: 'texto', type: 'text', label: 'Ponto', required: true }],
+    },
+    oculto(grupoImagemDestaque),
+    oculto(campoFaq),
+    oculto(grupoSeo),
     {
       name: 'destaqueHome',
       type: 'checkbox',
       label: 'Candidata a manchete',
       defaultValue: false,
-      admin: {
-        position: 'sidebar',
-        condition: (data) => data?.secao === 'materia',
-        description: 'A home usa a matéria marcada mais recente como manchete.',
-      },
+      admin: { hidden: true, disableBulkEdit: true },
     },
     {
       name: 'relacionados',
@@ -195,47 +219,22 @@ export const Textos: CollectionConfig = {
       relationTo: ['textos', 'vinhos'],
       hasMany: true,
       label: 'Relacionados',
-      admin: {
-        position: 'sidebar',
-        description: 'Vinhos citados viram cartões; textos viram o "leia também".',
-      },
-      // Em documento novo ainda não há `id` — sem o guard, a validação do create
-      // compararia com undefined e recusaria qualquer seleção.
+      admin: { hidden: true, disableBulkEdit: true },
       filterOptions: ({ id, relationTo }) =>
         relationTo === 'textos' && id ? { id: { not_equals: id } } : true,
-    },
-    campoSlug('titulo'),
-    campoIndiceBusca,
-    {
-      name: 'tempoLeitura',
-      type: 'number',
-      label: 'Tempo de leitura (min)',
-      admin: {
-        position: 'sidebar',
-        readOnly: true,
-        description: 'Calculado sozinho a partir do corpo.',
-      },
     },
     {
       name: 'urlBeehiiv',
       type: 'text',
       label: 'Endereço original no beehiiv',
-      admin: {
-        position: 'sidebar',
-        condition: (data) => data?.secao === 'boletim',
-        description:
-          'Preenchido pela importação. Serve para apontar a canônica do beehiiv de volta para cá.',
-      },
+      index: true,
+      admin: { hidden: true, disableBulkEdit: true },
     },
     {
       name: 'importadaEm',
       type: 'date',
-      label: 'Importada em',
-      admin: {
-        position: 'sidebar',
-        readOnly: true,
-        condition: (data) => data?.secao === 'boletim',
-      },
+      label: 'Importado em',
+      admin: { hidden: true, disableBulkEdit: true },
     },
   ],
   hooks: {
@@ -244,19 +243,24 @@ export const Textos: CollectionConfig = {
         if (operation === 'update' && originalDoc?._status === 'published') {
           data.dataAtualizacao = new Date().toISOString()
         }
-        data.tempoLeitura = estimarTempoLeitura(data?.corpo)
 
-        // Guia sem tipo nem nível entra com os padrões — sem bloquear o publish.
-        if (data?.secao === 'guia') {
-          if (!data.tipoGuia) data.tipoGuia = 'tecnico'
-          if (!data.nivel) data.nivel = 'iniciante'
-        }
+        const corpo = data.corpo ?? originalDoc?.corpo
+        const titulo = data.titulo ?? originalDoc?.titulo
+        const subtitulo = data.subtitulo ?? originalDoc?.subtitulo
+
+        // Uma varredura da árvore do texto por salvamento, e não uma por valor
+        // derivado. O gancho roda a cada segundo e meio enquanto a pessoa digita.
+        const leitura = lerCorpo(corpo)
+
+        data.tempoLeitura = Math.max(1, Math.round(leitura.palavras / 200))
+        data.capa = leitura.capa ?? null
+        data.palavrasChave = derivarPalavrasChave(leitura)
 
         /**
          * A numeração do boletim é automática: ao publicar uma edição sem número,
-         * ela recebe o maior existente + 1. Numerar só no publish evita buracos
-         * deixados por rascunhos abandonados; a importação do beehiiv manda o
-         * número explícito e passa direto por aqui.
+         * ela recebe o maior existente + 1. Continua aqui, inerte, porque nada mais
+         * é gravado como boletim pelo painel — só a importação do beehiiv, que manda
+         * o número explícito.
          */
         if (data?.secao === 'boletim' && data?._status === 'published' && !data?.numero) {
           const ultimo = await req.payload.find({
@@ -269,23 +273,23 @@ export const Textos: CollectionConfig = {
             depth: 0,
             overrideAccess: true,
           })
-          const maior = Number(ultimo.docs[0]?.numero ?? 0)
-          data.numero = maior + 1
+          data.numero = Number(ultimo.docs[0]?.numero ?? 0) + 1
         }
 
-        // Edição sem chip escolhido ganha a cor da própria numeração: a fita
-        // cromática do arquivo cresce sozinha, percorrendo a escala.
-        if (data?.secao === 'boletim' && !data.chipCor && typeof data.numero === 'number') {
-          const indice = (data.numero - 1) % ESCALA_CROMATICA.length
-          data.chipCor = ESCALA_CROMATICA[indice].id
+        // A cor do cartão sai do endereço: determinística, então o mesmo texto tem
+        // sempre a mesma faixa da escala. Edição do boletim mantém a cor da numeração,
+        // que é o que faz a fita cromática do arquivo crescer percorrendo a régua.
+        if (data?.secao === 'boletim' && typeof data.numero === 'number') {
+          data.chipCor = ESCALA_CROMATICA[(data.numero - 1) % ESCALA_CROMATICA.length].id
+        } else {
+          data.chipCor = derivarChipCor(data.slug ?? originalDoc?.slug)
         }
 
-        data.indiceBusca = montarIndiceBusca([
-          data?.titulo,
-          data?.subtitulo,
-          resumoOuTrecho(data as { resumo?: string | null; corpo?: unknown }),
-          data?.secao === 'boletim' && data?.numero ? `edicao ${data.numero}` : null,
-        ])
+        // O índice de busca inclui o corpo inteiro. Antes só via título, subtítulo e
+        // resumo — uma uva citada no quinto parágrafo não era encontrável.
+        const resumo = data.resumo || trechoDeLeitura(leitura)
+        data.indiceBusca = montarIndiceBusca([titulo, subtitulo, resumo, leitura.texto])
+
         return data
       },
     ],

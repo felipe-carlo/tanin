@@ -21,8 +21,7 @@ export const metadata: Metadata = {
 
 const CAMINHOS = [
   { rotulo: 'Página inicial', endereco: '/', nota: 'A capa de hoje' },
-  { rotulo: 'Matérias', endereco: '/materias', nota: 'Tudo que já publicamos' },
-  { rotulo: 'Guias', endereco: '/guias', nota: 'O conteúdo que não vence' },
+  { rotulo: 'Textos', endereco: '/materias', nota: 'Tudo que já publicamos' },
   { rotulo: 'Vinhos', endereco: '/vinhos', nota: 'As fichas de degustação' },
   { rotulo: 'Busca', endereco: '/busca', nota: 'Procurar no acervo inteiro' },
 ]
@@ -30,7 +29,7 @@ const CAMINHOS = [
 export default async function NaoEncontrada() {
   // Um 404 não pode depender do banco: se o banco cair, esta é justamente a página
   // que todo mundo vai ver. Sem as matérias recentes ela continua de pé.
-  const recentes: Texto[] = await listarTextos({ secao: 'materia', limite: 3 })
+  const recentes: Texto[] = await listarTextos({ limite: 3 })
     .then((lista) => lista.docs)
     .catch(() => [])
 

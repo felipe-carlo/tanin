@@ -1,6 +1,6 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, GlobalAfterChangeHook } from 'payload'
 
-import { BASE_POR_SECAO, type Secao } from '@/lib/secoes'
+import { BASE_DOS_TEXTOS } from '@/lib/secoes'
 
 /**
  * REVALIDAÇÃO SOB DEMANDA
@@ -71,55 +71,19 @@ export const ganchosDeRevalidacao = (
 })
 
 /**
- * Ganchos da coleção de textos, onde o índice depende da seção do documento.
+ * Ganchos da coleção de textos.
  *
- * Uma matéria revalida /materias, uma edição revalida /boletim — e um texto que
- * trocou de seção (ou de slug) revalida também o endereço antigo, para não
- * deixar página órfã no cache.
+ * O índice já dependeu da seção do documento; hoje há um endereço só, e o que sobra
+ * de cuidado é o slug: um texto que mudou de endereço deixa a página antiga órfã no
+ * cache, e ela precisa ser limpa junto.
  */
 export const ganchosDeRevalidacaoPorSecao = (): {
   afterChange: CollectionAfterChangeHook[]
   afterDelete: CollectionAfterDeleteHook[]
-} => {
-  const indiceDe = (doc?: { secao?: string | null }): string =>
-    BASE_POR_SECAO[(doc?.secao ?? 'materia') as Secao] ?? '/materias'
-
-  return {
-    afterChange: [
-      async ({ doc, previousDoc, context }) => {
-        const foiPublicado = doc?._status === 'published'
-        const eraPublicado = previousDoc?._status === 'published'
-        if (!foiPublicado && !eraPublicado) return doc
-        if (context?.pularRevalidacao) return doc
-
-        const indice = indiceDe(doc)
-        const caminhos = [...SEMPRE, indice]
-        if (doc?.slug) caminhos.push(`${indice}/${doc.slug}`)
-
-        const indiceAnterior = indiceDe(previousDoc)
-        const mudouDeLugar =
-          (previousDoc?.slug && previousDoc.slug !== doc?.slug) || indiceAnterior !== indice
-        if (mudouDeLugar && previousDoc?.slug) {
-          caminhos.push(indiceAnterior, `${indiceAnterior}/${previousDoc.slug}`)
-        }
-        await revalidar(caminhos)
-        return doc
-      },
-    ],
-    afterDelete: [
-      async ({ doc }) => {
-        const indice = indiceDe(doc)
-        const caminhos = [...SEMPRE, indice]
-        if (doc?.slug) caminhos.push(`${indice}/${doc.slug}`)
-        await revalidar(caminhos)
-        return doc
-      },
-    ],
-  }
-}
+} => ganchosDeRevalidacao(BASE_DOS_TEXTOS)
 
 /** Mexer nas configurações do site muda o cabeçalho e o rodapé de todas as páginas. */
 export const revalidarSiteInteiro: GlobalAfterChangeHook = async ({ doc }) => {
-  await revalidar(['/', '/materias', '/boletim', '/vinhos', '/guias', '/sobre'])
+  await revalidar(['/', '/materias', '/vinhos', '/busca', '/sobre'])
   return doc
 }

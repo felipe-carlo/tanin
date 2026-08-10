@@ -3,7 +3,7 @@ import type { Where } from 'payload'
 
 import { normalizarParaBusca } from '@/fields/busca'
 import { obterPayload } from '@/lib/payload'
-import { enderecoDoTexto, type Secao } from '@/lib/secoes'
+import { enderecoDoTexto } from '@/lib/secoes'
 import { resumoOuTrecho } from '@/lib/texto'
 import type { Texto, Vinho } from '@/payload-types'
 
@@ -40,39 +40,32 @@ const combinar = (...condicoes: (Where | undefined)[]): Where => {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Textos — matérias, edições do boletim e guias, numa coleção só              */
+/* Textos                                                                      */
 /* -------------------------------------------------------------------------- */
 
-/** A ordenação natural de cada seção: cronológica, por número ou alfabética. */
-const ORDEM_PADRAO: Record<Secao, string> = {
-  materia: '-dataPublicacao',
-  boletim: '-numero',
-  guia: 'titulo',
-}
-
+/**
+ * Todos os textos, em ordem de publicação.
+ *
+ * Sem filtro de seção: o portal publica um tipo só, e os textos antigos gravados como
+ * edição do boletim ou guia respondem no mesmo endereço que os novos. Filtrar por
+ * seção agora esconderia metade do acervo de si mesmo.
+ */
 export const listarTextos = cache(
   async (opcoes: {
-    secao: Secao
     limite?: number
     pagina?: number
-    categoria?: string
-    tipoGuia?: string
-    nivel?: string
     excluirIds?: number[]
     ordem?: string
     depth?: number
-  }) => {
+  } = {}) => {
     const payload = await obterPayload()
-    const filtros: Where[] = [publicado(), { secao: { equals: opcoes.secao } }]
-    if (opcoes.categoria) filtros.push({ categoria: { equals: opcoes.categoria } })
-    if (opcoes.tipoGuia) filtros.push({ tipoGuia: { equals: opcoes.tipoGuia } })
-    if (opcoes.nivel) filtros.push({ nivel: { equals: opcoes.nivel } })
+    const filtros: Where[] = [publicado()]
     if (opcoes.excluirIds?.length) filtros.push({ id: { not_in: opcoes.excluirIds } })
 
     return payload.find({
       collection: 'textos',
       where: combinar(...filtros),
-      sort: opcoes.ordem ?? ORDEM_PADRAO[opcoes.secao],
+      sort: opcoes.ordem ?? '-dataPublicacao',
       limit: opcoes.limite ?? 12,
       page: opcoes.pagina ?? 1,
       depth: opcoes.depth ?? 1,
@@ -81,42 +74,31 @@ export const listarTextos = cache(
   },
 )
 
-/**
- * Um texto pelo slug, DENTRO da seção pedida.
- *
- * A seção faz parte do endereço: um guia não pode responder em /materias/…, então
- * a consulta filtra pelas duas coisas e a URL errada devolve 404, não conteúdo.
- */
-export const obterTexto = cache(
-  async (secao: Secao, slug: string): Promise<Texto | null> => {
-    const payload = await obterPayload()
-    const resultado = await payload.find({
-      collection: 'textos',
-      where: combinar(publicado(), { secao: { equals: secao } }, { slug: { equals: slug } }),
-      limit: 1,
-      depth: 2,
-      overrideAccess: false,
-    })
-    return resultado.docs[0] ?? null
-  },
-)
-
-/** A manchete: a matéria marcada como candidata mais recente, ou a mais recente. */
-export const obterManchete = cache(async (): Promise<Texto | null> => {
+/** Um texto pelo slug. */
+export const obterTexto = cache(async (slug: string): Promise<Texto | null> => {
   const payload = await obterPayload()
-  const destacada = await payload.find({
+  const resultado = await payload.find({
     collection: 'textos',
-    where: combinar(publicado(), { secao: { equals: 'materia' } }, { destaqueHome: { equals: true } }),
-    sort: '-dataPublicacao',
+    where: combinar(publicado(), { slug: { equals: slug } }),
     limit: 1,
     depth: 2,
     overrideAccess: false,
   })
-  if (destacada.docs[0]) return destacada.docs[0]
+  return resultado.docs[0] ?? null
+})
 
+/**
+ * A manchete da home: o texto publicado mais recente.
+ *
+ * Havia uma caixa de "candidata a manchete" para marcar no painel. Ela saiu junto com o
+ * resto do formulário — e não faz falta: numa publicação semanal, o mais recente É a
+ * manchete. Escolher outra coisa seria enterrar o que acabou de sair.
+ */
+export const obterManchete = cache(async (): Promise<Texto | null> => {
+  const payload = await obterPayload()
   const recente = await payload.find({
     collection: 'textos',
-    where: combinar(publicado(), { secao: { equals: 'materia' } }),
+    where: publicado(),
     sort: '-dataPublicacao',
     limit: 1,
     depth: 2,
@@ -124,33 +106,6 @@ export const obterManchete = cache(async (): Promise<Texto | null> => {
   })
   return recente.docs[0] ?? null
 })
-
-/** Edição anterior e seguinte, para navegar o arquivo sem voltar ao índice. */
-export const obterVizinhasDaEdicao = cache(
-  async (numero: number): Promise<{ anterior: Texto | null; proxima: Texto | null }> => {
-    const payload = await obterPayload()
-    const boletim: Where = { secao: { equals: 'boletim' } }
-    const [anterior, proxima] = await Promise.all([
-      payload.find({
-        collection: 'textos',
-        where: combinar(publicado(), boletim, { numero: { less_than: numero } }),
-        sort: '-numero',
-        limit: 1,
-        depth: 0,
-        overrideAccess: false,
-      }),
-      payload.find({
-        collection: 'textos',
-        where: combinar(publicado(), boletim, { numero: { greater_than: numero } }),
-        sort: 'numero',
-        limit: 1,
-        depth: 0,
-        overrideAccess: false,
-      }),
-    ])
-    return { anterior: anterior.docs[0] ?? null, proxima: proxima.docs[0] ?? null }
-  },
-)
 
 /* -------------------------------------------------------------------------- */
 /* Vinhos                                                                      */
@@ -255,7 +210,7 @@ export const opcoesDeFiltroDeVinho = cache(async () => {
 /* -------------------------------------------------------------------------- */
 
 export type ResultadoDeBusca = {
-  tipo: Secao | 'vinho'
+  tipo: 'texto' | 'vinho'
   id: number
   titulo: string
   resumo?: string | null
@@ -273,6 +228,10 @@ export type ResultadoDeBusca = {
  *
  * Cada palavra da consulta precisa aparecer, mas não necessariamente juntas nem na
  * mesma ordem: "malbec argentina" acha uma ficha que diz "Malbec de Mendoza, Argentina".
+ *
+ * Desde que o motor editorial passou a indexar o corpo inteiro, e não só o cabeçalho,
+ * uma uva citada no quinto parágrafo é encontrável. Era o buraco mais irritante da
+ * busca anterior: o texto existia, falava do assunto, e não aparecia.
  *
  * Usa o `like` do Postgres em vez de um serviço externo. Para um acervo da ordem de
  * milhares de documentos isso resolve bem, custa zero e não acrescenta um serviço a
@@ -309,12 +268,9 @@ export const buscar = cache(async (termo: string): Promise<ResultadoDeBusca[]> =
 
   return [
     ...textos.docs.map((doc) => ({
-      tipo: (doc.secao ?? 'materia') as Secao,
+      tipo: 'texto' as const,
       id: doc.id,
-      titulo:
-        doc.secao === 'boletim' && doc.numero
-          ? `Edição ${doc.numero}: ${doc.titulo}`
-          : doc.titulo,
+      titulo: doc.titulo,
       resumo: resumoOuTrecho(doc),
       endereco: enderecoDoTexto(doc),
       chipCor: doc.chipCor,

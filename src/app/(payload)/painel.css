@@ -43,3 +43,165 @@ html[data-theme='light'] {
   text-transform: uppercase;
   font-size: 0.7rem;
 }
+
+/* ========================================================================== */
+/* MODO ESCRITA                                                               */
+/* ========================================================================== */
+
+/**
+ * A tela de escrever um texto.
+ *
+ * Tudo aqui é escopado por `.tanin-escrita`, a classe que o componente `ModoEscrita`
+ * põe no documento quando a rota é a de um texto. Nada disso vaza para o resto do
+ * /admin — a mídia, as inscrições e os usuários continuam com as telas normais do
+ * Payload, que são boas para o que são: formulários.
+ *
+ * Os seletores são os nomes de classe reais do Payload 3.87, conferidos no DOM e não
+ * de memória. Se uma atualização do Payload renomear alguma coisa, o efeito é a tela
+ * voltar a parecer um formulário — feio, mas inteiro. Nenhuma regra aqui é necessária
+ * para o editor funcionar.
+ */
+
+.tanin-escrita {
+  --tanin-coluna: 42rem;
+  --tanin-tinta: #14110f;
+  --tanin-grafite: #4a443e;
+  --tanin-tenue: #a8a29b;
+}
+
+/**
+ * A barra lateral do documento fica vazia no modo escrita — todos os campos que
+ * moravam nela agora são calculados pelo motor. O Payload continua reservando os
+ * 480px dela e desenhando o fio de separação; sem esta regra, a coluna de escrita
+ * fica torta, empurrada para a esquerda por um vão que não tem nada dentro.
+ */
+.tanin-escrita .document-fields__sidebar-wrap {
+  display: none;
+}
+
+.tanin-escrita .document-fields--has-sidebar .document-fields__main {
+  width: 100%;
+}
+
+/* A coluna de leitura, centrada. O Payload usa a largura toda por padrão, que é
+   certo para uma tabela de campos e errado para um parágrafo. */
+.tanin-escrita .document-fields__fields {
+  max-width: var(--tanin-coluna);
+  margin-inline: auto;
+}
+
+/**
+ * O cabeçalho do documento some inteiro.
+ *
+ * Ele repetia o título logo acima do título que se está escrevendo, e as abas
+ * (Edit · Versions · API) convidam a sair de uma página em que a pessoa acabou de
+ * entrar para escrever. As versões continuam existindo — chega-se a elas pelo menu
+ * de três pontos, ao lado de Publicar.
+ */
+.tanin-escrita .doc-header {
+  display: none;
+}
+
+/**
+ * E a fileira de metadados também: "Status: Draft", "Last Modified", "Created",
+ * "Last saved less than a minute ago" — quatro relógios para uma pergunta só, que a
+ * barra de escrita responde numa frase. Ficam os botões.
+ */
+.tanin-escrita .doc-controls__meta {
+  display: none;
+}
+
+/* Rótulo e moldura: o que transforma escrita em formulário. */
+.tanin-escrita .rich-text-lexical__label-row {
+  display: none;
+}
+
+/* O fio à esquerda do corpo — o "gutter" do Lexical — marca onde começa o campo.
+   Numa página em branco não há campo para marcar. */
+.tanin-escrita .rich-text-lexical--show-gutter .editor-container {
+  border-left: 0;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.tanin-campo {
+  margin-bottom: 0;
+}
+
+.tanin-campo__area {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--tanin-tinta);
+  resize: none;
+  overflow: hidden;
+}
+
+.tanin-campo__area:focus {
+  outline: none;
+}
+
+.tanin-campo__area::placeholder {
+  color: var(--tanin-tenue);
+  opacity: 1;
+}
+
+/* O título ocupa o lugar que ocuparia numa capa de revista. */
+.tanin-titulo .tanin-campo__area {
+  font-family: var(--fonte-display), 'Iowan Old Style', Georgia, serif;
+  font-variation-settings: 'SOFT' 22, 'WONK' 1;
+  font-weight: 500;
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  line-height: 1.08;
+  letter-spacing: -0.032em;
+  margin-block: 1.5rem 0;
+}
+
+.tanin-subtitulo .tanin-campo__area {
+  font-family: var(--fonte-corpo), Georgia, 'Times New Roman', serif;
+  font-size: 1.25rem;
+  line-height: 1.4;
+  color: var(--tanin-grafite);
+  margin-block: 0.75rem 1.75rem;
+}
+
+/* O corpo: sem moldura, sem fundo, na mesma serifada de leitura do site. */
+.tanin-escrita .rich-text-lexical {
+  border: 0;
+  background: transparent;
+}
+
+.tanin-escrita .rich-text-lexical .ContentEditable__root {
+  font-family: var(--fonte-corpo), Georgia, 'Times New Roman', serif;
+  font-size: 1.125rem;
+  line-height: 1.7;
+  padding-inline: 0;
+}
+
+.tanin-escrita .rich-text-lexical .ContentEditable__root:focus {
+  outline: none;
+}
+
+/* O aviso de rascunho salvo, ao lado dos botões de publicar. */
+.tanin-barra-escrita {
+  align-self: center;
+  margin-right: 0.75rem;
+  font-family: var(--fonte-rotulo), ui-sans-serif, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tanin-tenue);
+  white-space: nowrap;
+}
+
+.tanin-barra-escrita[data-estado='alterado'] {
+  color: #6b2130;
+}
+
+@media (max-width: 48rem) {
+  .tanin-barra-escrita {
+    display: none;
+  }
+}

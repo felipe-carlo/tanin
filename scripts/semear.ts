@@ -2958,11 +2958,13 @@ async function semearConfiguracoes(): Promise<void> {
       boletimChamada:
         'Toda semana, uma carta sobre vinho — o que vale a pena abrir, o que não vale o preço e o que ninguém está contando.',
       boletimPeriodicidade: 'Semanal, às quintas',
+      // O menu do painel vence o padrão do código (`MENU_PADRAO`, em `src/lib/site.ts`).
+      // Com um tipo só de texto, três itens dizem tudo — e as seções antigas foram para
+      // o 301, então listá-las aqui seria oferecer atalho para um redirecionamento.
       menu: [
-        { rotulo: 'Matérias', endereco: '/materias' },
-        { rotulo: 'Boletim', endereco: '/boletim' },
+        { rotulo: 'Textos', endereco: '/materias' },
         { rotulo: 'Vinhos', endereco: '/vinhos' },
-        { rotulo: 'Guias', endereco: '/guias' },
+        { rotulo: 'Sobre', endereco: '/sobre' },
       ],
       rodapeTexto:
         'A Tanin não recebe patrocínio de importadora, não publica conteúdo pago disfarçado de matéria e não usa link de afiliado. Quando uma garrafa chega como amostra, isso é dito na ficha. É o que sustenta a única coisa que temos para oferecer: a confiança de quem lê.',

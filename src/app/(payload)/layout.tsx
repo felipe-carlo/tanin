@@ -5,6 +5,9 @@ import '@payloadcms/next/css'
 import { RootLayout, handleServerFunctions } from '@payloadcms/next/layouts'
 import React from 'react'
 
+import { ModoEscrita } from '@/admin/ModoEscrita'
+import { classesDeFonte } from '@/lib/fontes'
+
 import { importMap } from './admin/importMap.js'
 import './painel.css'
 
@@ -19,7 +22,7 @@ const serverFunction: ServerFunctionClient = async function (args) {
 
 const Layout = ({ children }: Args) => (
   <RootLayout config={config} importMap={importMap} serverFunction={serverFunction}>
-    {children}
+    <ModoEscrita classesDeFonte={classesDeFonte}>{children}</ModoEscrita>
   </RootLayout>
 )
 

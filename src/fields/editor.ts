@@ -108,12 +108,24 @@ export const editorTanin = lexicalEditor({
       ],
     }),
     RelationshipFeature({ enabledCollections: ['textos', 'vinhos'] }),
+    /**
+     * A imagem entra arrastada para dentro do texto, e é ali mesmo que se decide qual
+     * delas representa o texto fora dele — no cartão da home, no Google, no WhatsApp.
+     * Sem nenhuma marcada, vale a primeira. Quem lê essa escolha é o motor editorial
+     * (`lerCorpo`, em `src/lib/texto.ts`); não existe campo de capa em lugar nenhum.
+     */
     UploadFeature({
       collections: {
         midia: {
           fields: [
             { name: 'legenda', type: 'text', label: 'Legenda' },
             { name: 'credito', type: 'text', label: 'Crédito' },
+            {
+              name: 'principal',
+              type: 'checkbox',
+              label: 'Usar como imagem principal do texto',
+              defaultValue: false,
+            },
           ],
         },
       },

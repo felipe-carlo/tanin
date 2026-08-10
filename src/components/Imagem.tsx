@@ -35,6 +35,7 @@ export function Imagem({
   className = '',
   prioridade = false,
   proporcao,
+  legenda,
 }: {
   midia: ReferenciaDeMidia
   tamanho?: NomeDeTamanho
@@ -43,6 +44,8 @@ export function Imagem({
   prioridade?: boolean
   /** Proporção forçada, ex.: '3 / 2'. Sem ela, a imagem mantém a proporção original. */
   proporcao?: string
+  /** Legenda desta aparição, usada como descrição quando a mídia não tem uma. */
+  legenda?: string | null
 }) {
   const doc = comoMidia(midia)
   const url = urlDaMidia(midia, tamanho)
@@ -55,7 +58,13 @@ export function Imagem({
   return (
     <Image
       src={url}
-      alt={doc.alt ?? ''}
+      /**
+       * A descrição em cascata: o alt da mídia, depois a legenda desta aparição, e por
+       * fim `""`. O último caso não é desistência — `alt=""` diz ao leitor de tela que
+       * a imagem é decorativa e pode ser pulada, que é a marcação certa para uma foto
+       * que o texto ao redor já explica. Pior seria inventar uma descrição.
+       */
+      alt={doc.alt?.trim() || legenda?.trim() || doc.legenda?.trim() || ''}
       width={largura}
       height={altura}
       sizes={sizes}
@@ -104,6 +113,7 @@ export function Figura({
         sizes={sizes}
         prioridade={prioridade}
         proporcao={proporcao}
+        legenda={textoLegenda}
         className="w-full"
       />
       {(textoLegenda || textoCredito) && (

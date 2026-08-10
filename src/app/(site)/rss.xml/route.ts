@@ -4,8 +4,7 @@ import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical
 
 import { comoMidia, urlDaMidia } from '@/components/Imagem'
 import { listarTextos } from '@/lib/consultas'
-import { categoriaPorValor } from '@/lib/categorias'
-import { enderecoDoDoc } from '@/lib/secoes'
+import { enderecoDoDoc, enderecoDoTexto } from '@/lib/secoes'
 import { autoraDe, NOME_SITE, obterConfiguracoes, URL_SITE, urlAbsoluta } from '@/lib/site'
 import { resumoOuTrecho } from '@/lib/texto'
 import type { Midia } from '@/payload-types'
@@ -147,7 +146,6 @@ interface ItemDoFeed {
   data: string
   resumo: string
   autoria: string
-  categoria: string
   conteudo: string
 }
 
@@ -155,37 +153,21 @@ const publico = (documento: { seo?: { naoIndexar?: boolean | null } | null }): b
   !documento.seo?.naoIndexar
 
 async function montarItens(): Promise<ItemDoFeed[]> {
-  const [config, materias, edicoes] = await Promise.all([
+  const [config, textos] = await Promise.all([
     obterConfiguracoes(),
-    listarTextos({ secao: 'materia', limite: QUANTIDADE }),
-    listarTextos({ secao: 'boletim', limite: QUANTIDADE }),
+    listarTextos({ limite: QUANTIDADE }),
   ])
 
   const assinaturaDaCasa = autoraDe(config).nome ?? (config.nomeSite ?? NOME_SITE)
 
-  const deMaterias: ItemDoFeed[] = materias.docs.filter(publico).map((materia) => ({
-    titulo: materia.titulo,
-    endereco: urlAbsoluta(`/materias/${materia.slug}`),
-    data: materia.dataPublicacao ?? materia.createdAt,
-    resumo: resumoOuTrecho(materia),
+  return textos.docs.filter(publico).map((texto) => ({
+    titulo: texto.titulo,
+    endereco: urlAbsoluta(enderecoDoTexto(texto)),
+    data: texto.dataPublicacao ?? texto.createdAt,
+    resumo: resumoOuTrecho(texto),
     autoria: assinaturaDaCasa,
-    categoria: categoriaPorValor(materia.categoria)?.label ?? 'Matérias',
-    conteudo: corpoEmHtml(materia.corpo, resumoOuTrecho(materia)),
+    conteudo: corpoEmHtml(texto.corpo, resumoOuTrecho(texto)),
   }))
-
-  const deEdicoes: ItemDoFeed[] = edicoes.docs.filter(publico).map((edicao) => ({
-    titulo: `Edição ${edicao.numero} · ${edicao.titulo}`,
-    endereco: urlAbsoluta(`/boletim/${edicao.slug}`),
-    data: edicao.dataPublicacao ?? edicao.createdAt,
-    resumo: resumoOuTrecho(edicao),
-    autoria: assinaturaDaCasa,
-    categoria: config.boletimTitulo ?? 'Boletim Tanin',
-    conteudo: corpoEmHtml(edicao.corpo, resumoOuTrecho(edicao)),
-  }))
-
-  return [...deMaterias, ...deEdicoes]
-    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-    .slice(0, QUANTIDADE)
 }
 
 /* -------------------------------------------------------------------------- */
@@ -221,7 +203,6 @@ export async function GET(): Promise<Response> {
         `      <guid isPermaLink="true">${escapar(item.endereco)}</guid>`,
         `      <pubDate>${rfc822(item.data)}</pubDate>`,
         `      <dc:creator>${cdata(item.autoria)}</dc:creator>`,
-        `      <category>${escapar(item.categoria)}</category>`,
         `      <description>${cdata(item.resumo)}</description>`,
         `      <content:encoded>${cdata(item.conteudo)}</content:encoded>`,
         '    </item>',

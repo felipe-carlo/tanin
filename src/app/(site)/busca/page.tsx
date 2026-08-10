@@ -13,24 +13,21 @@ import { URL_SITE } from '@/lib/site'
 type Props = { searchParams: Promise<ParametrosDeBusca> }
 
 const DESCRICAO =
-  'Procure por uva, região, produtor, prato ou tema em tudo que a Tanin já publicou: matérias, guias, fichas de vinho e o arquivo do Boletim.'
+  'Procure por uva, região, produtor, prato ou tema no texto completo de tudo o que a Tanin já publicou.'
 
 /** A ordem dos grupos é a ordem de utilidade, não a do banco. */
 const GRUPOS: { tipo: ResultadoDeBusca['tipo']; titulo: string }[] = [
-  { tipo: 'materia', titulo: 'Matérias' },
-  { tipo: 'guia', titulo: 'Guias' },
+  { tipo: 'texto', titulo: 'Textos' },
   { tipo: 'vinho', titulo: 'Fichas de vinho' },
-  { tipo: 'boletim', titulo: 'Boletim' },
 ]
 
 const SECOES = [
-  { rotulo: 'Matérias', endereco: '/materias', nota: 'Reportagens, ensaios e entrevistas' },
-  { rotulo: 'Guias', endereco: '/guias', nota: 'Uvas, regiões, harmonização e serviço' },
+  { rotulo: 'Todos os textos', endereco: '/materias', nota: 'Em ordem de publicação' },
   { rotulo: 'Vinhos', endereco: '/vinhos', nota: 'Fichas com nota, preço e onde comprar' },
-  { rotulo: 'Boletim', endereco: '/boletim', nota: 'O arquivo de todas as edições' },
+  { rotulo: 'Sobre', endereco: '/sobre', nota: 'Quem escreve e como avaliamos' },
 ]
 
-/** Rede de segurança para quando ainda não há guias publicados. */
+/** Rede de segurança para quando ainda não há texto publicado. */
 const TERMOS_SUGERIDOS = ['Malbec', 'Vinho verde', 'Harmonização', 'Champagne', 'Portugal', 'Rosé']
 
 const TRILHA = [
@@ -151,7 +148,7 @@ export default async function PaginaDeBusca({ searchParams }: Props) {
 async function BuscaEmBranco() {
   // As sugestões são um enfeite útil, não o assunto da página: se o banco não
   // responder, a busca continua funcionando com os termos fixos abaixo.
-  const guias = await listarTextos({ secao: 'guia', limite: 6 })
+  const recentes = await listarTextos({ limite: 6 })
     .then((lista) => lista.docs)
     .catch(() => [])
 
@@ -183,19 +180,19 @@ async function BuscaEmBranco() {
 
         <section className="col-span-6 lg:col-span-6 lg:col-start-7">
           <h2 className="rotulo text-grafite">
-            {guias.length > 0 ? 'Começar por um guia' : 'Buscas para começar'}
+            {recentes.length > 0 ? 'Publicados por último' : 'Buscas para começar'}
           </h2>
 
-          {guias.length > 0 ? (
+          {recentes.length > 0 ? (
             <ul className="mt-2">
-              {guias.map((guia) => (
-                <li key={guia.id} className="border-b border-fio">
+              {recentes.map((texto) => (
+                <li key={texto.id} className="border-b border-fio">
                   <Link
-                    href={`/guias/${guia.slug}`}
+                    href={`/materias/${texto.slug}`}
                     className="group flex min-h-11 items-center gap-3 py-3.5"
                   >
-                    <Chip cor={guia.chipCor} tamanho="pequeno" />
-                    <span className="link-titulo text-apoio leading-snug">{guia.titulo}</span>
+                    <Chip cor={texto.chipCor} tamanho="pequeno" />
+                    <span className="link-titulo text-apoio leading-snug">{texto.titulo}</span>
                   </Link>
                 </li>
               ))}

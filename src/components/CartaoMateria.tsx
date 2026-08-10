@@ -2,18 +2,12 @@ import Link from 'next/link'
 
 import { Chip } from '@/components/Chip'
 import { Imagem } from '@/components/Imagem'
-import { categoriaPorValor } from '@/lib/categorias'
 import { dataPorExtenso, iso } from '@/lib/formatar'
 import { enderecoDoTexto } from '@/lib/secoes'
 import { resumoOuTrecho } from '@/lib/texto'
 import type { Texto } from '@/payload-types'
 
 type Conteudo = Texto
-
-const categoriaDe = (conteudo: Conteudo): string | null => {
-  if (conteudo.secao === 'guia') return 'Guia'
-  return categoriaPorValor(conteudo.categoria)?.label ?? null
-}
 
 const enderecoDe = (conteudo: Conteudo): string => enderecoDoTexto(conteudo)
 
@@ -42,9 +36,8 @@ export function CartaoMateria({
   nivel?: 2 | 3
 }) {
   const Titulo = nivel === 2 ? 'h2' : 'h3'
-  const categoria = categoriaDe(conteudo)
   const data = conteudo.dataPublicacao ?? conteudo.createdAt
-  const temImagem = conteudo.destaque?.imagem && typeof conteudo.destaque.imagem === 'object'
+  const temImagem = conteudo.capa && typeof conteudo.capa === 'object'
 
   const classesTitulo = {
     pequeno: 'text-t4',
@@ -63,7 +56,7 @@ export function CartaoMateria({
       {temImagem && (
         <div className="mb-5 overflow-hidden bg-papel-fundo">
           <Imagem
-            midia={conteudo.destaque?.imagem}
+            midia={conteudo.capa}
             tamanho={tamanho === 'grande' ? 'largura' : 'cartao'}
             sizes={sizes}
             proporcao={tamanho === 'grande' ? '16 / 9' : '3 / 2'}
@@ -75,8 +68,6 @@ export function CartaoMateria({
 
       <p className="rotulo flex flex-wrap items-center gap-x-2.5 gap-y-1 text-grafite">
         <Chip cor={conteudo.chipCor} tamanho="pequeno" />
-        {categoria && <span>{categoria}</span>}
-        {categoria && data && <span aria-hidden="true" className="text-tenue">·</span>}
         {data && <time dateTime={iso(data)}>{dataPorExtenso(data)}</time>}
       </p>
 
@@ -114,7 +105,6 @@ export function LinhaMateria({
   nivel?: 2 | 3
 }) {
   const Titulo = nivel === 2 ? 'h2' : 'h3'
-  const categoria = categoriaDe(conteudo)
   const data = conteudo.dataPublicacao ?? conteudo.createdAt
 
   return (
@@ -131,7 +121,6 @@ export function LinhaMateria({
         <div className="min-w-0">
           <p className="rotulo flex flex-wrap items-center gap-x-2.5 gap-y-1 text-grafite">
             <Chip cor={conteudo.chipCor} tamanho="pequeno" />
-            {categoria && <span>{categoria}</span>}
             {data && <time dateTime={iso(data)}>{dataPorExtenso(data)}</time>}
           </p>
           <Titulo className="mt-2 text-t4 leading-tight">

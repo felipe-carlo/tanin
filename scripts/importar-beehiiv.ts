@@ -18,9 +18,10 @@
  * navegador: é uma varredura de tags que cobre o que uma newsletter realmente usa.
  * O que ele NÃO faz, de propósito:
  *
- *  1. Imagens não são baixadas. Cada <img> vira uma marca no texto com o endereço
- *     original, em itálico, para a Ana abrir, baixar e subir de novo pelo painel —
- *     onde a imagem ganha crédito, legenda e os tamanhos que o portal serve.
+ *  1. Imagens são baixadas e viram documentos de mídia, com os tamanhos que o portal
+ *     serve, e a primeira de cada texto entra marcada como imagem principal. O que
+ *     não vem é o crédito do fotógrafo, que newsletter raramente traz, nem o texto
+ *     alternativo quando o beehiiv não mandou um — vale revisar em Mídia depois.
  *  2. <table>, <script>, <style>, <iframe>, <form>, <svg> e <noscript> são
  *     descartados inteiros, com aviso. Tabela de layout de e-mail não vira conteúdo;
  *     tabela de dados de verdade precisa ser remontada à mão (é raríssimo em carta).
@@ -464,25 +465,22 @@ const enderecoValido = (endereco?: string): boolean =>
   Boolean(endereco && !/^(javascript|data):/i.test(endereco.trim()))
 
 /**
- * Imagem: não baixamos nada. Fica uma marca visível no rascunho, com o endereço
- * original clicável, para a Ana subir a imagem pelo painel e apagar a marca.
+ * Imagem pendente.
  *
- * Dentro de um link a marca vira texto puro: link dentro de link não existe em
- * HTML, e o Lexical não sabe representar isso.
+ * A conversão de HTML é síncrona e o download não é, então a imagem entra aqui como
+ * uma marca — endereço e texto alternativo — e vira nó de upload de verdade num segundo
+ * passo (`resolverImagens`), depois que o arquivo estiver no acervo de mídia.
+ *
+ * Antes este mesmo ponto deixava só um `[imagem do beehiiv — …]` em itálico no meio do
+ * texto, para alguém baixar e subir à mão depois. Com a imagem principal saindo do
+ * próprio corpo, isso significaria todo texto importado chegar sem capa e com sujeira
+ * no meio — dívida manual multiplicada pelo tamanho do arquivo do boletim.
  */
-const marcaDeImagem = (
-  endereco: string,
-  alternativo: string,
-  comLink: boolean,
-): NoLexical[] => {
-  const legenda = alternativo.trim() || 'sem legenda'
-  if (!comLink) return [noTexto(`[imagem do beehiiv — ${legenda}: ${endereco}]`, ITALICO)]
-  return [
-    noTexto(`[imagem do beehiiv — ${legenda}: `, ITALICO),
-    noLink(endereco, [noTexto(endereco, ITALICO)]),
-    noTexto(']', ITALICO),
-  ]
-}
+const TIPO_IMAGEM_PENDENTE = 'imagemPendente'
+
+const marcaDeImagem = (endereco: string, alternativo: string): NoLexical[] => [
+  { type: TIPO_IMAGEM_PENDENTE, version: 1, endereco, alternativo: alternativo.trim() },
+]
 
 const temTexto = (nos: NoLexical[]): boolean =>
   nos.some((no) => {
@@ -555,8 +553,7 @@ function converterEmLinha(
       case 'img': {
         const endereco = no.atributos.src ?? no.atributos['data-src'] ?? ''
         if (enderecoValido(endereco)) {
-          saida.push(...marcaDeImagem(endereco, no.atributos.alt ?? '', !dentroDeLink))
-          contexto.avisar(`imagem não baixada: ${endereco}`)
+          saida.push(...marcaDeImagem(endereco, no.atributos.alt ?? ''))
         }
         break
       }
@@ -845,6 +842,141 @@ async function corpoDoPost(post: PostBeehiiv): Promise<string> {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Imagens: do beehiiv para o acervo de mídia                                  */
+/* -------------------------------------------------------------------------- */
+
+const noUpload = (idDaMidia: number, legenda: string, principal: boolean): NoLexical => ({
+  type: 'upload',
+  relationTo: 'midia',
+  value: idDaMidia,
+  fields: { legenda: legenda || undefined, credito: undefined, principal },
+  format: '',
+  version: 3,
+})
+
+/** Nome de arquivo legível a partir do endereço, com extensão que faça sentido. */
+function nomeDoArquivo(endereco: string, tipo: string): string {
+  const semParametros = endereco.split('?')[0] ?? ''
+  const ultimo = decodeURIComponent(semParametros.split('/').pop() ?? '').trim()
+  const extensao = /\.([a-z0-9]+)$/i.exec(ultimo)?.[1]
+  const base = paraSlug(ultimo.replace(/\.[a-z0-9]+$/i, '')) || 'imagem-do-beehiiv'
+  return `${base}.${extensao ?? (tipo.split('/')[1] ?? 'jpg').split('+')[0]}`
+}
+
+/**
+ * Baixa uma imagem e cria o documento de mídia.
+ *
+ * O cache por endereço não é otimização: a mesma logomarca aparece no rodapé de todas
+ * as edições, e sem ele o acervo terminaria com sessenta cópias do mesmo arquivo.
+ */
+async function subirImagem(
+  payload: Payload,
+  endereco: string,
+  alternativo: string,
+  cache: Map<string, number | null>,
+  avisar: (aviso: string) => void,
+): Promise<number | null> {
+  if (cache.has(endereco)) return cache.get(endereco) ?? null
+
+  try {
+    const resposta = await fetch(endereco, { redirect: 'follow' })
+    if (!resposta.ok) throw new Error(`respondeu ${resposta.status}`)
+
+    const tipo = resposta.headers.get('content-type') ?? 'image/jpeg'
+    if (!tipo.startsWith('image/')) throw new Error(`não é imagem (${tipo})`)
+
+    const dados = Buffer.from(await resposta.arrayBuffer())
+    // Rastreador de abertura de e-mail: 1x1 transparente. Entra em toda newsletter e
+    // não é conteúdo — deixá-lo passar encheria o acervo de pixels invisíveis.
+    if (dados.byteLength < 1024) throw new Error('pequena demais, provável pixel de rastreio')
+
+    const criada = await payload.create({
+      collection: 'midia',
+      data: { alt: alternativo || undefined },
+      file: {
+        data: dados,
+        mimetype: tipo.split(';')[0]!,
+        name: nomeDoArquivo(endereco, tipo),
+        size: dados.byteLength,
+      },
+    })
+
+    cache.set(endereco, criada.id)
+    return criada.id
+  } catch (erro) {
+    avisar(`imagem não importada (${endereco}): ${erro instanceof Error ? erro.message : 'falhou'}`)
+    cache.set(endereco, null)
+    return null
+  }
+}
+
+/**
+ * Segundo passo da conversão: troca as marcas de imagem por nós de upload de verdade.
+ *
+ * Uma imagem no Lexical é bloco, nunca filha de parágrafo. Então, para cada bloco de
+ * primeiro nível, as marcas são retiradas de dentro e promovidas: se o parágrafo não
+ * tinha mais nada além delas, ele some e as imagens ocupam o lugar; se tinha texto, o
+ * texto fica e as imagens vêm logo depois. É o que preserva a ordem de leitura.
+ *
+ * A primeira imagem do texto entra marcada como principal — vira a capa do cartão, do
+ * Google e do WhatsApp. Quem revisar o rascunho pode mudar a escolha no editor.
+ */
+async function resolverImagens(
+  payload: Payload,
+  nos: NoLexical[],
+  cache: Map<string, number | null>,
+  avisar: (aviso: string) => void,
+  seco: boolean,
+): Promise<NoLexical[]> {
+  let primeira = true
+
+  /** Retira as marcas de dentro de um bloco e devolve o bloco limpo + as marcas. */
+  const separar = (no: NoLexical): { limpo: NoLexical; pendentes: NoLexical[] } => {
+    const pendentes: NoLexical[] = []
+    const andar = (lista: NoLexical[]): NoLexical[] =>
+      lista.flatMap((filho) => {
+        if (filho.type === TIPO_IMAGEM_PENDENTE) {
+          pendentes.push(filho)
+          return []
+        }
+        if (Array.isArray(filho.children)) {
+          return [{ ...filho, children: andar(filho.children as NoLexical[]) }]
+        }
+        return [filho]
+      })
+
+    if (!Array.isArray(no.children)) return { limpo: no, pendentes }
+    return { limpo: { ...no, children: andar(no.children as NoLexical[]) }, pendentes }
+  }
+
+  const saida: NoLexical[] = []
+
+  for (const no of nos) {
+    const { limpo, pendentes } = separar(no)
+    if (temTexto([limpo])) saida.push(limpo)
+
+    for (const pendente of pendentes) {
+      const endereco = String(pendente.endereco ?? '')
+      const alternativo = String(pendente.alternativo ?? '')
+
+      if (seco) {
+        // No ensaio nada é baixado, mas a contagem precisa aparecer no relatório.
+        avisar(`imagem seria importada: ${endereco}`)
+        primeira = false
+        continue
+      }
+
+      const id = await subirImagem(payload, endereco, alternativo, cache, avisar)
+      if (id === null) continue
+      saida.push(noUpload(id, alternativo, primeira))
+      primeira = false
+    }
+  }
+
+  return saida
+}
+
+/* -------------------------------------------------------------------------- */
 /* Gravação no Payload                                                         */
 /* -------------------------------------------------------------------------- */
 
@@ -1045,6 +1177,9 @@ async function principal(): Promise<number> {
   let atualizadas = 0
   let puladas = 0
   const avisos: string[] = []
+  // O acervo de imagens é compartilhado entre todas as edições da rodada: a mesma
+  // logomarca de rodapé aparece em todas elas e entra uma vez só.
+  const imagens = new Map<string, number | null>()
 
   for (const { post, numero } of selecionadas) {
     const rotulo = `Edição ${String(numero).padStart(2, '0')}`
@@ -1052,7 +1187,8 @@ async function principal(): Promise<number> {
     const avisar = (aviso: string) => avisosDaEdicao.push(aviso)
 
     const html = await corpoDoPost(post)
-    const nos = converterHtmlEmLexical(html, avisar)
+    const convertidos = converterHtmlEmLexical(html, avisar)
+    const nos = await resolverImagens(payload, convertidos, imagens, avisar, opcoes.seco)
 
     if (nos.length === 0 || !temTexto(nos)) {
       puladas += 1
@@ -1155,6 +1291,7 @@ async function principal(): Promise<number> {
   console.log(`  criadas:     ${criadas}`)
   console.log(`  atualizadas: ${atualizadas}`)
   console.log(`  puladas:     ${puladas}`)
+  console.log(`  imagens:     ${[...imagens.values()].filter((id) => id !== null).length}`)
   console.log(`  avisos:      ${avisos.length}`)
 
   if (avisos.length > 0) {

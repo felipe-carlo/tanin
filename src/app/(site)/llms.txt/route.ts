@@ -58,36 +58,26 @@ const ESCALA_DE_NOTA = `de ${NOTA_MINIMA} a ${NOTA_MAXIMA} taças, em degraus de
 /* -------------------------------------------------------------------------- */
 
 export async function GET(): Promise<Response> {
-  const [config, guias, vinhos, materias, edicoes] = await Promise.all([
+  const [config, vinhos, textos] = await Promise.all([
     obterConfiguracoes(),
-    semQuebrar(listarTextos({ secao: 'guia', limite: 500 })),
     semQuebrar(listarVinhos({ limite: 40 })),
-    semQuebrar(listarTextos({ secao: 'materia', limite: 40 })),
-    semQuebrar(listarTextos({ secao: 'boletim', limite: 20 })),
+    semQuebrar(listarTextos({ limite: 100 })),
   ])
 
   const nome = config.nomeSite ?? NOME_SITE
   const descricao = config.descricao ?? 'Vinho contado como quem conversa, não como quem vende.'
-  const boletim = config.boletimTitulo ?? 'Boletim Tanin'
 
   const linhas = [
     `# ${nome}`,
     '',
     `> ${limpar(descricao)}`,
     '',
-    'Portal brasileiro de jornalismo sobre vinho, escrito em português. O conteúdo é aberto, sem paywall, e pode ser citado com atribuição e link para a página de origem.',
+    'Publicação brasileira sobre vinho, escrita em português. O conteúdo é aberto, sem paywall, e pode ser citado com atribuição e link para a página de origem.',
 
     ...secao('Sobre', [
       link(nome, '/', descricao),
-      link(`Sobre a ${nome}`, '/sobre', 'Quem assina o portal, como as fichas são avaliadas e como falar com a redação.'),
+      link(`Sobre a ${nome}`, '/sobre', 'Quem assina a publicação, como as fichas são avaliadas e como falar com a redação.'),
     ]),
-
-    ...secao(
-      'Guias',
-      guias.docs
-        .filter(publico)
-        .map((guia) => link(guia.titulo, `/guias/${guia.slug}`, resumoOuTrecho(guia))),
-    ),
 
     ...secao(
       'Fichas de vinho',
@@ -103,24 +93,11 @@ export async function GET(): Promise<Response> {
     ),
 
     ...secao(
-      'Matérias',
-      materias.docs
+      'Textos',
+      textos.docs
         .filter(publico)
-        .map((materia) => link(materia.titulo, `/materias/${materia.slug}`, resumoOuTrecho(materia))),
+        .map((texto) => link(texto.titulo, `/materias/${texto.slug}`, resumoOuTrecho(texto))),
     ),
-
-    ...secao('Boletim', [
-      link(
-        boletim,
-        '/boletim',
-        `O arquivo completo do boletim, com ${plural(edicoes.totalDocs, 'edição publicada', 'edições publicadas')}.`,
-      ),
-      ...edicoes.docs
-        .filter(publico)
-        .map((edicao) =>
-          link(`Edição ${edicao.numero} · ${edicao.titulo}`, `/boletim/${edicao.slug}`, resumoOuTrecho(edicao)),
-        ),
-    ]),
 
     ...secao('Como navegar', [
       // A escala é explicada em /sobre. A página /estilo, que também a desenha, é a
@@ -128,7 +105,8 @@ export async function GET(): Promise<Response> {
       // modelo para lá contradiz o que o próprio site diz aos robôs.
       link('Escala cromática do vinho', '/sobre#a-escala', ESCALA_DE_COR),
       link('Escala de notas', '/sobre#como-avaliamos', ESCALA_DE_NOTA),
-      link('Busca no acervo', '/busca', 'Busca em matérias, edições do boletim, fichas de vinho e guias ao mesmo tempo.'),
+      link('Busca no acervo', '/busca', 'Busca no texto completo dos textos e nas fichas de vinho.'),
+      link('Assinar o boletim', '/#assinar', 'Cada texto novo chega por e-mail.'),
     ]),
     '',
   ]

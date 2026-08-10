@@ -136,7 +136,7 @@ export interface UsuarioAuthOperations {
   };
 }
 /**
- * Tudo que se escreve: matérias, edições do boletim e guias. A seção, na lateral, decide onde o texto aparece.
+ * Tudo o que a Tanin publica.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "textos".
@@ -144,14 +144,7 @@ export interface UsuarioAuthOperations {
 export interface Texto {
   id: number;
   titulo: string;
-  /**
-   * A linha fina, logo abaixo do título.
-   */
   subtitulo?: string | null;
-  /**
-   * De 40 a 60 palavras, escritas para fazer sentido sozinhas, fora da página. É o trecho que buscadores e IAs vão citar.
-   */
-  resumo?: string | null;
   corpo: {
     root: {
       type: string;
@@ -167,15 +160,63 @@ export interface Texto {
     };
     [k: string]: unknown;
   };
+  slug?: string | null;
+  indiceBusca?: string | null;
   /**
-   * Três a cinco frases curtas e auto-contidas. Abrem o guia e são o pedaço mais citável da página.
+   * De 40 a 60 palavras, escritas para fazer sentido sozinhas, fora da página. É o trecho que buscadores e IAs vão citar.
    */
+  resumo?: string | null;
+  capa?: (number | null) | Midia;
+  palavrasChave?: string | null;
+  tempoLeitura?: number | null;
+  /**
+   * A faixa da escala cromática do vinho que representa este conteúdo. É o que dá cor ao cartão, à fita do boletim e aos filtros.
+   */
+  chipCor?:
+    | (
+        | 'verde-palha'
+        | 'palha'
+        | 'ouro'
+        | 'ouro-velho'
+        | 'ambar'
+        | 'laranja'
+        | 'rosa-palido'
+        | 'salmao'
+        | 'cobre'
+        | 'cereja'
+        | 'rubi'
+        | 'purpura'
+        | 'granada'
+        | 'tawny'
+      )
+    | null;
+  /**
+   * Deixe uma data futura para agendar. O conteúdo só aparece no site depois dela.
+   */
+  dataPublicacao?: string | null;
+  /**
+   * Aparece nas páginas evergreen. Atualize quando revisar o conteúdo.
+   */
+  dataAtualizacao?: string | null;
+  secao: 'materia' | 'boletim' | 'guia';
+  categoria?: ('reportagem' | 'ensaio' | 'entrevista' | 'degustacao' | 'mercado' | 'cultura') | null;
+  tipoGuia?: ('uva' | 'regiao' | 'harmonizacao' | 'servico' | 'compra' | 'tecnico') | null;
+  nivel?: ('iniciante' | 'intermediario') | null;
+  numero?: number | null;
   paraLevar?:
     | {
         texto: string;
         id?: string | null;
       }[]
     | null;
+  destaque?: {
+    imagem?: (number | null) | Midia;
+    /**
+     * Fotógrafo, ilustrador ou origem. Aparece embaixo da imagem.
+     */
+    credito?: string | null;
+    legenda?: string | null;
+  };
   /**
    * Cada par vira um bloco no fim da página e entra no código que o Google e as IAs leem. Responda de forma auto-contida, sem depender do resto do texto.
    */
@@ -215,70 +256,7 @@ export interface Texto {
      */
     canonica?: string | null;
   };
-  /**
-   * Decide onde o texto mora no site: /materias, /boletim ou /guias.
-   */
-  secao: 'materia' | 'boletim' | 'guia';
-  /**
-   * Opcional. Sem editoria, a matéria aparece só no recorte "Tudo".
-   */
-  categoria?: ('reportagem' | 'ensaio' | 'entrevista' | 'degustacao' | 'mercado' | 'cultura') | null;
-  /**
-   * Se ficar vazio, entra como "Tema técnico".
-   */
-  tipoGuia?: ('uva' | 'regiao' | 'harmonizacao' | 'servico' | 'compra' | 'tecnico') | null;
-  /**
-   * Se ficar vazio, entra como "Iniciante".
-   */
-  nivel?: ('iniciante' | 'intermediario') | null;
-  /**
-   * Numerada sozinha ao publicar: a próxima edição é sempre a maior + 1.
-   */
-  numero?: number | null;
-  destaque?: {
-    imagem?: (number | null) | Midia;
-    /**
-     * Fotógrafo, ilustrador ou origem. Aparece embaixo da imagem.
-     */
-    credito?: string | null;
-    legenda?: string | null;
-  };
-  /**
-   * A faixa da escala cromática do vinho que representa este conteúdo. É o que dá cor ao cartão, à fita do boletim e aos filtros.
-   */
-  chipCor?:
-    | (
-        | 'verde-palha'
-        | 'palha'
-        | 'ouro'
-        | 'ouro-velho'
-        | 'ambar'
-        | 'laranja'
-        | 'rosa-palido'
-        | 'salmao'
-        | 'cobre'
-        | 'cereja'
-        | 'rubi'
-        | 'purpura'
-        | 'granada'
-        | 'tawny'
-      )
-    | null;
-  /**
-   * Deixe uma data futura para agendar. O conteúdo só aparece no site depois dela.
-   */
-  dataPublicacao?: string | null;
-  /**
-   * Aparece nas páginas evergreen. Atualize quando revisar o conteúdo.
-   */
-  dataAtualizacao?: string | null;
-  /**
-   * A home usa a matéria marcada mais recente como manchete.
-   */
   destaqueHome?: boolean | null;
-  /**
-   * Vinhos citados viram cartões; textos viram o "leia também".
-   */
   relacionados?:
     | (
         | {
@@ -291,18 +269,6 @@ export interface Texto {
           }
       )[]
     | null;
-  /**
-   * Preenchido sozinho a partir do título. Prefira slugs curtos, em português, com um tema só.
-   */
-  slug?: string | null;
-  indiceBusca?: string | null;
-  /**
-   * Calculado sozinho a partir do corpo.
-   */
-  tempoLeitura?: number | null;
-  /**
-   * Preenchido pela importação. Serve para apontar a canônica do beehiiv de volta para cá.
-   */
   urlBeehiiv?: string | null;
   importadaEm?: string | null;
   updatedAt: string;
@@ -318,9 +284,9 @@ export interface Texto {
 export interface Midia {
   id: number;
   /**
-   * Descreva a imagem para quem não pode vê-la. É lido por leitores de tela e pelos buscadores.
+   * Descreve a imagem para quem não pode vê-la. Se ficar em branco, usamos a legenda.
    */
-  alt: string;
+  alt?: string | null;
   /**
    * Fotógrafo, ilustrador ou banco de imagem.
    */
@@ -808,13 +774,33 @@ export interface PayloadMigration {
 export interface TextosSelect<T extends boolean = true> {
   titulo?: T;
   subtitulo?: T;
-  resumo?: T;
   corpo?: T;
+  slug?: T;
+  indiceBusca?: T;
+  resumo?: T;
+  capa?: T;
+  palavrasChave?: T;
+  tempoLeitura?: T;
+  chipCor?: T;
+  dataPublicacao?: T;
+  dataAtualizacao?: T;
+  secao?: T;
+  categoria?: T;
+  tipoGuia?: T;
+  nivel?: T;
+  numero?: T;
   paraLevar?:
     | T
     | {
         texto?: T;
         id?: T;
+      };
+  destaque?:
+    | T
+    | {
+        imagem?: T;
+        credito?: T;
+        legenda?: T;
       };
   faq?:
     | T
@@ -833,26 +819,8 @@ export interface TextosSelect<T extends boolean = true> {
         naoIndexar?: T;
         canonica?: T;
       };
-  secao?: T;
-  categoria?: T;
-  tipoGuia?: T;
-  nivel?: T;
-  numero?: T;
-  destaque?:
-    | T
-    | {
-        imagem?: T;
-        credito?: T;
-        legenda?: T;
-      };
-  chipCor?: T;
-  dataPublicacao?: T;
-  dataAtualizacao?: T;
   destaqueHome?: T;
   relacionados?: T;
-  slug?: T;
-  indiceBusca?: T;
-  tempoLeitura?: T;
   urlBeehiiv?: T;
   importadaEm?: T;
   updatedAt?: T;

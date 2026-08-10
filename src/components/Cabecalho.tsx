@@ -55,7 +55,7 @@ export async function Cabecalho() {
               <path d="M11 11L15.5 15.5" strokeLinecap="round" />
             </svg>
           </Link>
-          <Link href="/boletim#assinar" className="botao hidden !px-5 !py-2.5 lg:inline-flex">
+          <Link href="/#assinar" className="botao hidden !px-5 !py-2.5 lg:inline-flex">
             Assinar
           </Link>
           <MenuMovel itens={itens} />

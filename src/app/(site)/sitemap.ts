@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next'
 import type { Where } from 'payload'
 
 import { obterPayload } from '@/lib/payload'
-import { BASE_POR_SECAO, type Secao } from '@/lib/secoes'
+import { BASE_DOS_TEXTOS } from '@/lib/secoes'
 import { URL_SITE } from '@/lib/site'
 
 /**
@@ -37,9 +37,7 @@ const ROTAS_FIXAS: {
 }[] = [
   { caminho: '/', prioridade: 1, frequencia: 'daily', secao: TUDO },
   { caminho: '/materias', prioridade: 0.8, frequencia: 'daily', secao: '/materias' },
-  { caminho: '/boletim', prioridade: 0.8, frequencia: 'weekly', secao: '/boletim' },
   { caminho: '/vinhos', prioridade: 0.8, frequencia: 'daily', secao: '/vinhos' },
-  { caminho: '/guias', prioridade: 0.8, frequencia: 'weekly', secao: '/guias' },
   { caminho: '/sobre', prioridade: 0.6, frequencia: 'yearly' },
   // A busca só serve a quem já está dentro do site: entra no mapa, mas por último.
   { caminho: '/busca', prioridade: 0.2, frequencia: 'monthly' },
@@ -60,7 +58,6 @@ const publicado = (): Where => ({
 
 interface DocumentoDoMapa {
   slug?: string | null
-  secao?: string | null
   dataAtualizacao?: string | null
   updatedAt?: string | null
   seo?: { naoIndexar?: boolean | null } | null
@@ -105,7 +102,7 @@ async function rotasDeConteudo(): Promise<SecaoDoMapa[]> {
     payload.find({
       collection: 'textos',
       ...comum,
-      select: { slug: true, secao: true, dataAtualizacao: true, updatedAt: true, seo: true },
+      select: { slug: true, dataAtualizacao: true, updatedAt: true, seo: true },
     }),
     payload.find({
       collection: 'vinhos',
@@ -114,13 +111,10 @@ async function rotasDeConteudo(): Promise<SecaoDoMapa[]> {
     }),
   ])
 
-  const daSecao = (secao: Secao) => textos.docs.filter((texto) => texto.secao === secao)
-
+  // Todos os textos num endereço só, inclusive os gravados como boletim ou guia:
+  // `enderecoDoTexto` os traz para `/materias`, e o mapa precisa dizer a mesma coisa.
   return [
-    montarSecao(BASE_POR_SECAO.materia, daSecao('materia'), 0.7, 'monthly'),
-    // Uma edição enviada é um arquivo fechado: muda de endereço nunca, de conteúdo quase nunca.
-    montarSecao(BASE_POR_SECAO.boletim, daSecao('boletim'), 0.7, 'yearly'),
-    montarSecao(BASE_POR_SECAO.guia, daSecao('guia'), 0.7, 'monthly'),
+    montarSecao(BASE_DOS_TEXTOS, textos.docs, 0.7, 'monthly'),
     montarSecao('/vinhos', vinhos.docs, 0.7, 'monthly'),
   ]
 }

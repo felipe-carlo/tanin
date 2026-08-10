@@ -69,7 +69,8 @@ arquivo for pequeno (até umas 15 edições):
    [A VERIFICAR: quantas edições o feed da Tanin devolve.]
 2. Para o que não estiver no feed, abra cada edição no site do beehiiv, selecione o
    texto e copie.
-3. No painel do portal (`/admin`), vá em **Boletim Tanin → Criar nova** e cole.
+3. No painel do portal (`/admin`), vá em **Textos → Criar** e cole. Preencha o
+   título e o subtítulo; o resto o site calcula sozinho.
    Preencha à mão: número da edição (1 é a mais antiga), título, data de envio,
    resumo e o endereço original no campo "Endereço original no beehiiv".
 4. Salve como rascunho e publique depois de revisar, exatamente como no caminho A.
@@ -96,7 +97,7 @@ beehiiv e se as datas fazem sentido (a edição 01 tem que ser a mais antiga).
 pnpm importar:beehiiv --limite=3
 ```
 
-Abra `/admin`, entre em **Boletim Tanin** e olhe as três. Se estiverem boas, siga.
+Abra `/admin`, entre em **Textos** e olhe as três. Se estiverem boas, siga.
 
 **Por fim, tudo:**
 
@@ -135,36 +136,34 @@ revisou o conteúdo por outro caminho e sabe o que está fazendo.
 
 ---
 
-## 4. O que revisar em cada edição, antes de publicar
+## 4. O que revisar em cada texto, antes de publicar
 
-Abra a edição no painel e passe por esta lista. Leva dois ou três minutos por
-edição — e é o que separa um arquivo bonito de um arquivo remendado.
+Abra o texto no painel e passe por esta lista. Leva dois ou três minutos cada — e é o
+que separa um arquivo bonito de um arquivo remendado.
 
-1. **Imagens.** A importação não baixa imagem nenhuma, de propósito. Onde havia uma
-   foto, ficou uma marca em itálico assim:
-   `[imagem do beehiiv — a garrafa: https://media.beehiiv.com/...]`.
-   Abra o endereço, salve a imagem, suba pelo painel no lugar certo (com legenda e
-   crédito) e apague a marca. Se a imagem não valer a pena, apague só a marca.
-2. **Vídeos e conteúdo incorporado.** Vídeo do YouTube, player do Spotify e post do
+1. **Título e subtítulo.** Títulos de e-mail costumam ter emoji, "edição #12" e
+   chamadas de assunto. No portal isso vira ruído: limpe.
+2. **A imagem principal.** As imagens vêm junto agora — a importação baixa cada uma e
+   cria no acervo de mídia. A primeira de cada texto entra marcada como principal, e é
+   ela que aparece no cartão da home, no Google e no WhatsApp. Se outra representa
+   melhor, clique nela dentro do editor e marque **"Usar como imagem principal do
+   texto"**; a marca da primeira sai sozinha.
+3. **Descrição e crédito das imagens.** O que a importação não consegue trazer é o
+   texto alternativo (para quem não enxerga) e o crédito do fotógrafo — o beehiiv
+   raramente manda os dois. Vale abrir as imagens em **Mídia** e preencher.
+4. **Vídeos e conteúdo incorporado.** Vídeo do YouTube, player do Spotify e post do
    Instagram somem na importação — o aviso no fim da execução avisa quando isso
    aconteceu. Recoloque o link à mão onde fizer falta.
-3. **Tabelas.** Também são descartadas, com aviso. Newsletter usa tabela para
+5. **Tabelas.** Também são descartadas, com aviso. Newsletter usa tabela para
    diagramar, e isso não é conteúdo; mas se alguma tabela tinha informação de
    verdade, remonte como lista.
-4. **Resumo.** O campo "Resumo" é o trecho que o Google e as IAs citam. A importação
-   preenche com o texto de prévia do beehiiv ou com as primeiras linhas da edição.
-   Reescreva para que faça sentido sozinho, fora da página, em 40 a 60 palavras.
-5. **Título e subtítulo.** Títulos de e-mail costumam ter emoji, "edição #12" e
-   chamadas de assunto. No portal isso vira ruído: limpe.
-6. **Blocos e âncoras.** A aba "Blocos e âncoras" foi preenchida com os subtítulos
-   internos da edição, e vira o índice lateral da página. Apague os que não forem
-   trechos de verdade.
+6. **O primeiro parágrafo.** Ele vira o resumo — o trecho que o Google e as
+   inteligências artificiais vão citar. Não há campo de resumo para preencher: o que
+   há é um primeiro parágrafo que precisa fazer sentido sozinho, fora da página.
+   Newsletter costuma abrir com "oi, tudo bem?", e isso não se sustenta como resumo.
 7. **Links.** Confira dois ou três: links de rastreamento do beehiiv (com `utm_` no
-   fim) continuam funcionando, mas ficam feios. Se o link aponta para uma matéria
-   que hoje existe no portal, troque pelo endereço interno.
-8. **Cor da edição.** Cada edição recebe automaticamente uma faixa da escala
-   cromática, seguindo a numeração. Se a edição fala de um vinho específico, vale
-   escolher a cor à mão no campo "Chip de cor".
+   fim) continuam funcionando, mas ficam feios. Se o link aponta para um texto que
+   hoje existe no portal, troque pelo endereço interno.
 
 Revisado, clique em **Publicar**.
 
@@ -193,7 +192,7 @@ leva anos para nascer e some numa tarde se as páginas saírem do ar.
 
 Como fazer, no beehiiv: abra a edição, entre nas configurações do post e procure o
 campo de **Canonical URL** (fica na parte de SEO). Cole o endereço da edição no
-portal — por exemplo `https://tanin.com.br/boletim/nome-da-edicao` — e salve. Repita
+portal — por exemplo `https://tanin.com.br/materias/nome-do-texto` — e salve. Repita
 para cada edição. É chato, é repetitivo, é uma tarde de trabalho, e vale a pena.
 [A VERIFICAR: confirmar que o plano atual da Tanin expõe o campo de canonical por
 post. Se não expuser, a alternativa é manter as páginas no ar como estão e aceitar
@@ -214,7 +213,7 @@ ninguém acessa e manter as poucas que recebem visita, com canonical.
 
 O portal passa a ser a casa do conteúdo. O beehiiv continua sendo o carteiro.
 
-1. A Ana escreve a edição no painel do portal, em **Boletim Tanin**, e publica.
+1. A Ana escreve no painel do portal, em **Textos**, e publica.
 2. No beehiiv, ela cria o disparo do e-mail com o começo do texto e um link
    "continuar lendo" apontando para a edição no portal.
 3. Quem se inscreve pelo formulário do site entra direto na lista do beehiiv. Se a

@@ -7,17 +7,14 @@ const SECOES = [
   {
     titulo: 'Ler',
     itens: [
-      { rotulo: 'Matérias', endereco: '/materias' },
-      { rotulo: 'Guias', endereco: '/guias' },
+      { rotulo: 'Todos os textos', endereco: '/materias' },
       { rotulo: 'Fichas de vinho', endereco: '/vinhos' },
-      { rotulo: 'Agenda', endereco: '/agenda' },
     ],
   },
   {
     titulo: 'Boletim',
     itens: [
-      { rotulo: 'Assinar', endereco: '/boletim#assinar' },
-      { rotulo: 'Arquivo de edições', endereco: '/boletim' },
+      { rotulo: 'Assinar', endereco: '/#assinar' },
       { rotulo: 'RSS', endereco: '/rss.xml' },
     ],
   },

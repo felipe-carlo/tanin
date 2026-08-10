@@ -4,13 +4,11 @@ import type { Metadata } from 'next'
 import { CartaoMateria, LinhaMateria } from '@/components/CartaoMateria'
 import { CartaoVinho } from '@/components/CartaoVinho'
 import { Chip } from '@/components/Chip'
-import { FitaCromatica } from '@/components/FitaCromatica'
 import { FormularioBoletim } from '@/components/FormularioBoletim'
 import { Imagem } from '@/components/Imagem'
 import { Secao, TituloDeSecao } from '@/components/Secao'
-import { dataPorExtenso, doisDigitos, iso } from '@/lib/formatar'
+import { dataPorExtenso, iso } from '@/lib/formatar'
 import { listarTextos, listarVinhos, obterManchete } from '@/lib/consultas'
-import { categoriaPorValor } from '@/lib/categorias'
 import { resumoOuTrecho } from '@/lib/texto'
 import { autoraDe, obterConfiguracoes } from '@/lib/site'
 
@@ -22,24 +20,17 @@ export const metadata: Metadata = {
 }
 
 export default async function Home() {
-  const [config, manchete, edicoes, guias] = await Promise.all([
-    obterConfiguracoes(),
-    obterManchete(),
-    listarTextos({ secao: 'boletim', limite: 60, ordem: 'numero' }),
-    listarTextos({ secao: 'guia', limite: 5 }),
-  ])
+  const [config, manchete] = await Promise.all([obterConfiguracoes(), obterManchete()])
 
-  const [materias, vinhos] = await Promise.all([
-    listarTextos({ secao: 'materia', limite: 7, excluirIds: manchete ? [manchete.id] : [] }),
+  const [textos, vinhos] = await Promise.all([
+    listarTextos({ limite: 11, excluirIds: manchete ? [manchete.id] : [] }),
     listarVinhos({ limite: 4 }),
   ])
 
   const autora = autoraDe(config)
-  const categoriaManchete = categoriaPorValor(manchete?.categoria)
 
-  const [destaqueA, destaqueB, destaqueC, ...demais] = materias.docs
-  const ultimaEdicao = edicoes.docs[edicoes.docs.length - 1]
-  const vazio = !manchete && materias.docs.length === 0 && vinhos.docs.length === 0
+  const [destaqueA, destaqueB, destaqueC, ...demais] = textos.docs
+  const vazio = !manchete && textos.docs.length === 0 && vinhos.docs.length === 0
 
   return (
     <>
@@ -52,10 +43,6 @@ export default async function Home() {
             <div className="revelar col-span-6 lg:col-span-7">
               <p className="rotulo flex flex-wrap items-center gap-x-3 gap-y-1 text-borra">
                 <Chip cor={manchete.chipCor} tamanho="pequeno" />
-                {categoriaManchete && <span>{categoriaManchete.label}</span>}
-                <span aria-hidden="true" className="text-tenue">
-                  ·
-                </span>
                 <time dateTime={iso(manchete.dataPublicacao ?? manchete.createdAt)} className="text-grafite">
                   {dataPorExtenso(manchete.dataPublicacao ?? manchete.createdAt)}
                 </time>
@@ -144,7 +131,7 @@ export default async function Home() {
       {/* GRADE ASSIMÉTRICA                                                   */}
       {/* ------------------------------------------------------------------ */}
       {(destaqueA || destaqueB || destaqueC) && (
-        <Secao rotulo="Últimas matérias" className="caixa !pb-0">
+        <Secao rotulo="Últimos textos" className="caixa !pb-0">
           <div className="grade">
             {destaqueA && (
               <div className="revelar-ao-rolar col-span-6 lg:col-span-5">
@@ -165,94 +152,22 @@ export default async function Home() {
 
           {demais.length > 0 && (
             <div className="mt-16">
-              <TituloDeSecao acao="Ver todas" enderecoAcao="/materias">
+              <TituloDeSecao acao="Ver todos" enderecoAcao="/materias">
                 Também publicamos
               </TituloDeSecao>
+              {/* Sem trilho lateral: com um tipo só de conteúdo, não há um segundo
+                  acervo de textos para oferecer aqui. A lista ocupa a largura. */}
               <div className="grade">
-                <div className="col-span-6 lg:col-span-8">
-                  {demais.slice(0, 4).map((materia, indice) => (
-                    <LinhaMateria key={materia.id} conteudo={materia} numero={indice + 1} />
+                <div className="col-span-6 lg:col-span-8 lg:col-start-3">
+                  {demais.map((texto, indice) => (
+                    <LinhaMateria key={texto.id} conteudo={texto} numero={indice + 1} />
                   ))}
                 </div>
-
-                {/* Um `div` e não um `aside`: o `h3` "Para entender" já dá a este bloco
-                    um nome pelo qual leitor de tela navega, e um marco de página
-                    aninhado dentro do `main` só acrescentaria ruído. */}
-                {guias.docs.length > 0 && (
-                  <div className="col-span-6 lg:col-span-3 lg:col-start-10">
-                    <h3 className="rotulo border-b border-tinta pb-3">Para entender</h3>
-                    <ul className="mt-4 space-y-4">
-                      {guias.docs.slice(0, 5).map((guia) => (
-                        <li key={guia.id}>
-                          <Link
-                            href={`/guias/${guia.slug}`}
-                            className="group flex items-baseline gap-3"
-                          >
-                            <Chip cor={guia.chipCor} tamanho="pequeno" />
-                            <span className="link-titulo text-apoio leading-snug">
-                              {guia.titulo}
-                            </span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                    <Link href="/guias" className="rotulo mt-6 inline-block text-grafite hover:text-borra">
-                      Todos os guias <span aria-hidden="true">→</span>
-                    </Link>
-                  </div>
-                )}
               </div>
             </div>
           )}
         </Secao>
       )}
-
-      {/* ------------------------------------------------------------------ */}
-      {/* BOLETIM E FITA CROMÁTICA                                            */}
-      {/* ------------------------------------------------------------------ */}
-      <Secao rotulo="Boletim Tanin" className="mt-8">
-        <div className="caixa">
-          <TituloDeSecao acao="Ver o arquivo" enderecoAcao="/boletim">
-            {config.boletimTitulo ?? 'Boletim Tanin'} — {edicoes.totalDocs}{' '}
-            {edicoes.totalDocs === 1 ? 'edição' : 'edições'}
-          </TituloDeSecao>
-        </div>
-
-        {edicoes.docs.length > 0 ? (
-          <>
-            <FitaCromatica edicoes={edicoes.docs} altura="alta" />
-            <div className="caixa mt-6">
-              <div className="grade items-baseline">
-                <p className="col-span-6 text-apoio leading-relaxed text-grafite lg:col-span-5 bonito">
-                  Uma faixa por edição, na cor do vinho de que ela fala. A fita cresce toda
-                  semana — passe o cursor para ver o que tem dentro de cada uma.
-                </p>
-                {ultimaEdicao && (
-                  <div className="col-span-6 lg:col-span-5 lg:col-start-8">
-                    <p className="rotulo text-grafite">
-                      Última edição · {dataPorExtenso(ultimaEdicao.dataPublicacao)}
-                    </p>
-                    <h3 className="mt-2 text-t3 leading-tight">
-                      <Link href={`/boletim/${ultimaEdicao.slug}`} className="link-titulo">
-                        <span className="cartaz !text-t3 mr-2 text-borra">
-                          {doisDigitos(ultimaEdicao.numero ?? 0)}
-                        </span>
-                        {ultimaEdicao.titulo}
-                      </Link>
-                    </h3>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="caixa">
-            <p className="text-apoio text-grafite">
-              O arquivo do Boletim aparece aqui assim que a primeira edição for publicada.
-            </p>
-          </div>
-        )}
-      </Secao>
 
       {/* ------------------------------------------------------------------ */}
       {/* FICHAS DE VINHO                                                     */}

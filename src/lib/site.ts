@@ -12,12 +12,16 @@ export const NOME_SITE = 'Tanin'
 export const urlAbsoluta = (caminho = '/'): string =>
   caminho.startsWith('http') ? caminho : `${URL_SITE}${caminho.startsWith('/') ? caminho : `/${caminho}`}`
 
-/** Menu usado quando ninguém configurou nada no painel. */
+/**
+ * Menu usado quando ninguém configurou nada no painel.
+ *
+ * Três itens. Enquanto a publicação tem um tipo só de texto, um menu com cinco seções
+ * prometeria cinco lugares para ir e entregaria dois — pior do que não ter menu.
+ */
 export const MENU_PADRAO = [
-  { rotulo: 'Matérias', endereco: '/materias' },
-  { rotulo: 'Boletim', endereco: '/boletim' },
+  { rotulo: 'Textos', endereco: '/materias' },
   { rotulo: 'Vinhos', endereco: '/vinhos' },
-  { rotulo: 'Guias', endereco: '/guias' },
+  { rotulo: 'Sobre', endereco: '/sobre' },
 ]
 
 /** A ficha pública da autora, como guardada no global de configurações. */

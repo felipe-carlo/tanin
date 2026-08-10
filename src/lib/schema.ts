@@ -119,7 +119,7 @@ export function schemaDaPessoa(autora: Autora, comContexto = false) {
 
 export function schemaDaMateria(materia: Texto, autora: Autora) {
   const url = `${URL_SITE}/materias/${materia.slug}`
-  const imagem = imagemAbsoluta(materia.destaque?.imagem as Relacao<Midia>, 'compartilhamento')
+  const imagem = imagemAbsoluta(materia.capa as Relacao<Midia>, 'compartilhamento')
 
   return limpar({
     '@context': 'https://schema.org',
@@ -137,8 +137,10 @@ export function schemaDaMateria(materia: Texto, autora: Autora) {
     publisher: { '@id': ID_PUBLICACAO },
     isAccessibleForFree: true,
     inLanguage: 'pt-BR',
-    articleSection: categoriaPorValor(materia.categoria)?.label,
-    keywords: materia.seo?.palavrasChave ?? undefined,
+    // As palavras-chave vêm do motor editorial, que as tira da frequência de termos do
+    // próprio texto. Antes vinham de um campo de SEO — e campo de SEO preenchido à mão
+    // é exatamente o tipo de coisa que fica vazia quando a pressa aperta.
+    keywords: materia.palavrasChave ?? undefined,
     wordCount: materia.tempoLeitura ? materia.tempoLeitura * 200 : undefined,
     timeRequired: materia.tempoLeitura ? `PT${materia.tempoLeitura}M` : undefined,
   })

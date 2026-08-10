@@ -122,7 +122,7 @@ export function MenuMovel({ itens }: { itens: ItemMenu[] }) {
             Buscar no portal
           </Link>
           <Link
-            href="/boletim#assinar"
+            href="/#assinar"
             className="botao revelar mt-6 w-full"
             style={{ '--atraso': itens.length + 1 } as React.CSSProperties}
           >

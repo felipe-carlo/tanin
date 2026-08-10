@@ -1,7 +1,11 @@
 # Portal Tanin
 
-A casa canônica do conteúdo da **Tanin** — textos (matérias, o arquivo do Boletim e
-guias) e fichas de vinho. Tudo público, tudo indexável, sem paywall e sem login para ler.
+A casa canônica do conteúdo da **Tanin** — textos e fichas de vinho. Tudo público, tudo
+indexável, sem paywall e sem login para ler.
+
+Quem escreve digita três coisas: **título, subtítulo e o texto**. Resumo, endereço da
+página, imagem de compartilhamento, palavras-chave, tempo de leitura e busca saem
+sozinhos, calculados pelo motor editorial (`src/lib/texto.ts`) na hora de salvar.
 
 - **Site:** Next.js 16 (App Router) + TypeScript + Tailwind CSS 4
 - **Painel:** Payload CMS 3, em português, dentro do mesmo aplicativo, em `/admin`
@@ -45,33 +49,33 @@ Payload cria e atualiza as tabelas sozinho; em produção, só por migração.
 
 ## Publicar sem tocar em código
 
-Entre em `/admin` e escreva. O painel tem duas coleções de conteúdo, só:
+Entre em `/admin`, clique em **Textos → Criar** e comece a digitar. A tela tem três
+coisas: título, subtítulo e a página em branco. Não há mais nada para preencher.
 
-- **Textos** — tudo que se escreve. O campo "Seção", na lateral, decide se o texto é
-  uma matéria, uma edição do Boletim ou um guia — e, com isso, onde ele aparece no
-  site. Nada além de título e corpo é obrigatório para publicar.
-- **Vinhos** — as fichas estruturadas, com nota, veredito e filtros. Uva, região e
-  importadora são texto simples: escreva o nome e pronto.
-
-Alguns detalhes que valem saber:
-
-- **Rascunho e agendamento.** Todo conteúdo nasce como rascunho. Publique quando quiser,
-  ou marque uma data futura em "Data de publicação" e o site publica sozinho.
-- **Pré-visualização.** O botão de pré-visualizar mostra a página real, com o design do
-  site, antes de qualquer coisa ficar pública.
-- **O endereço da página** é preenchido sozinho a partir do título. Só mexa se quiser.
-- **O resumo é opcional — mas importa mais do que parece.** É o trecho que o Google e
-  as inteligências artificiais vão citar. Se ficar em branco, o site usa as primeiras
-  linhas do próprio texto; quando quiser caprichar, escreva de 40 a 60 palavras que
-  façam sentido sozinhas, fora da página.
-- **A edição do Boletim se numera sozinha** ao ser publicada, e o índice "Nesta edição"
-  nasce dos títulos de seção (H2) do próprio corpo.
+- **`Enter` no título** desce para o subtítulo; `Enter` no subtítulo desce para o texto.
+  Dá para escrever o texto inteiro sem tirar a mão do teclado.
+- **A tecla `/`** abre a lista de blocos: subtítulo interno, citação em destaque, caixa
+  de apoio, lista, fio, imagem.
+- **Imagens** entram arrastando para dentro do texto. Se houver mais de uma, marque
+  **"Usar como imagem principal do texto"** naquela que deve representar o texto no
+  cartão da home, no Google e no WhatsApp. Sem marcar nenhuma, vale a primeira.
+- **O texto se salva sozinho** a cada segundo e meio. O canto de cima diz quando foi a
+  última vez: *"rascunho salvo às 14:32"*.
+- **Rascunho e agendamento.** Todo texto nasce como rascunho. Publique quando quiser —
+  ou use "Publicar depois", no menu ao lado do botão, para marcar dia e hora.
+- **Não existe campo de SEO, de resumo, de seção, de editoria nem de endereço.** O
+  título da aba, a descrição do Google, o resumo que as inteligências artificiais
+  citam, o endereço da página, o tempo de leitura e a cor do cartão são calculados a
+  partir do que você escreveu, toda vez que o texto é salvo.
 - **A ficha da autora** (bio, foto, credenciais, redes) mora em Configurações do site,
   na aba "Autora" — preencha uma vez e ela assina tudo.
-- **O chip de cor** liga o conteúdo à escala cromática do vinho. É o que dá cor ao
-  cartão, à fita do arquivo e aos filtros.
-- **SEO em branco não é problema.** Se você não preencher, o site usa o título, o resumo
-  e a imagem de destaque da própria página.
+
+Essa penúltima linha é a decisão central do projeto: o resumo sai do primeiro parágrafo,
+o endereço sai do título, a imagem de compartilhamento sai do próprio texto. Quem
+escreve escreve; o site cuida do resto.
+
+**Vinhos** continua sendo uma coleção à parte, com as fichas estruturadas — nota,
+veredito e filtros. Uva, região e importadora são texto simples: escreva o nome e pronto.
 
 ---
 
@@ -84,24 +88,40 @@ src/
 │   └── (payload)/       o painel; não precisa mexer
 ├── collections/         o modelo de dados (o que existe em cada tipo de conteúdo)
 ├── components/          as peças visuais reaproveitadas
+├── admin/               a tela de escrita: título, subtítulo, barra de rascunho salvo
 ├── fields/              campos compartilhados: SEO, slug, editor de texto
-├── lib/                 consultas ao banco, formatação, JSON-LD, a escala de cores
+├── lib/                 o motor editorial, consultas, JSON-LD, a escala de cores
 ├── globals/             configurações do site editáveis pelo painel
 └── migrations/          mudanças de estrutura do banco, versionadas
 scripts/
 ├── semear.ts            conteúdo de exemplo
-└── importar-beehiiv.ts  importação única das edições antigas
+└── importar-beehiiv.ts  traz os textos e as imagens do beehiiv
 docs/
 └── beehiiv.md           como conectar o beehiiv, passo a passo
 ```
 
-Dois arquivos concentram as decisões que mais importam:
+Quatro arquivos concentram as decisões que mais importam:
 
+- **`src/lib/texto.ts`** — o motor editorial. Tudo o que o site sabe sobre um texto sem
+  ter perguntado nasce aqui: resumo, imagem principal, palavras-chave, tempo de leitura,
+  índice de busca, cor do cartão. Mexer na régua do resumo ou nas palavras vazias é
+  mexer aqui.
+- **`src/app/(payload)/painel.css`** — a tela de escrita. O bloco "modo escrita" é o que
+  transforma o formulário do Payload numa página em branco.
 - **`src/lib/escala-cores.ts`** — a escala cromática do vinho, em 14 faixas. É a fonte
   única: o painel, o CSS e os componentes leem daqui. Mudou aqui, mudou no site inteiro.
 - **`src/lib/nota.ts`** — a escala de notas. Trocar de 5 taças para 100 pontos é mexer
   neste arquivo e no campo `nota` de `src/collections/Vinhos.ts`. Nada mais no projeto
   conhece a régua.
+
+### O que está escondido, e como voltar
+
+A coleção `Textos` continua tendo os campos de seção, editoria, tipo de guia, nível,
+número de edição, imagem de destaque, FAQ, SEO, relacionados e manchete — todos com
+`admin: { hidden: true }`, com os dados intactos no banco. Sumiram da tela, não do
+modelo, porque a publicação tem hoje um tipo só de texto. Para trazer um de volta:
+apague o `hidden: true` do campo em `src/collections/Textos.ts`, e, se for a seção,
+recrie a página em `src/app/(site)/` e tire o redirecionamento do `next.config.mjs`.
 
 ---
 
@@ -115,7 +135,7 @@ Dois arquivos concentram as decisões que mais importam:
 | `pnpm typecheck` | Confere os tipos sem gerar nada |
 | `pnpm testar:banco` | Diz se um endereço de banco conecta — e, se não, o que fazer |
 | `pnpm semear` | Popula o banco com conteúdo de exemplo |
-| `pnpm importar:beehiiv` | Importa as edições antigas do beehiiv como rascunho |
+| `pnpm importar:beehiiv` | Traz os textos e as imagens do beehiiv como rascunho |
 | `pnpm generate:types` | Regenera os tipos depois de mexer nas coleções |
 | `pnpm migrate:criar <nome>` | Cria uma migração a partir das mudanças no modelo |
 | `pnpm migrate` | Aplica as migrações pendentes |
